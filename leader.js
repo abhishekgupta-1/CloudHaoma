@@ -22,15 +22,26 @@ var my_name = 'mypc';
 var leader_node = 'mypc'
 
 
-//Listening client requests for data writes (apart from galway girl!)
+//Listening client requests for data writes
 app.get('/pushData', function(req, res){
   //If not leader node, take chill
+  if (my_name != leader_node) {
+  	//Forward the request to the leader_node
+  }
+  else {
+	//Else perform the following commandments!
+	//1. Notify all followers about the client request (send the data too!) and store their response
+	//2. If majority of the followers didn't responded take chill!
+	//3. Else write the client data into this node and ask followers to do the same.
 
-  //Else perform the following commandments!
-  //1. Notify all followers about the client request (send the data too!) and store their response
-  //2. If majority of the followers didn't responded take chill!
-  //3. Else write the client data into this node and ask followers to do the same.
-
+  	var request_id = Math.random().toString(36).substring(7); //Assigning a randomID
+  	console.log("RequestID assigned : " + request_id)
+  	//Server sends a write request with requestID to all followers using event 'DataPush'
+  	//Server then waits for the events with id = requestID
+  	var followers_ns = io.of('/followers');
+  	io.emit('DataPush', {'data' : '123'});
+  }
+  res.send("{'Status' : 'Success'}");
 });
 
 //Hey, a follower just connected to me
