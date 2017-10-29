@@ -42,15 +42,14 @@ app.get('/pushData', function(req, res){
   	//Server then waits for the events with id = requestID
   	accept_dict[request_id] = 0;
   	io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
-  	var time_out = 100000000;
-  	while (time_out && accept_dict[request_id]<majority) time_out--;
-  	console.log(time_out)
-  	console.log(accept_dict[request_id])
-  	if (!time_out) {
-  		res.send("Empty");
-  		return;
-  	}
-  	res.send("Emitted!");
+  	var time_out = 1000000;
+    var my_int =   setInterval(function(){
+    	// console.log(accept_dict[request_id])
+      if (accept_dict[request_id] >= majority)
+      	res.send("Emitted!");
+        clearInterval(my_int);
+    },100);
+    // while (time_out && accept_dict[request_id]<majority) time_out--;
   	return;
   }
   res.send("{'Status' : 'Success'}");
