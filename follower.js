@@ -21,10 +21,13 @@ var leader_ipaddress = "http://172.18.16.71"+":"+port_no;
 const io = require('socket.io-client');
 var socket = io(leader_ipaddress);
 
-socket.on('DataPush', function(msg){
+var pending = array();
+var data_dict = {};
 
-	console.log(msg['data'])
-//	http://172.18.16.71:3000/
+socket.on('DataPush', function(msg){
+	console.log("Request received with data : "+ msg['data'] + "and requestID = " + msg['requestID']);
+	data_dict[msg['requestID']] = msg['data'];
+	socket.emit(msg['requestID'], {'data' : 'aye', 'requestID':msg['requestID']});
 });
 
 //Hey, Follower is connected to the leader
