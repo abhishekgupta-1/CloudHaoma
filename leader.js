@@ -22,8 +22,8 @@ var my_name = 'mypc';
 var leader_node = 'mypc'
 var total_nodes = list_nodes.length;
 var majority = 2;
-//Listening client requests (apart from Galway girl!)
-accept_dict = array();
+//Listening client requests
+var accept_dict = [];
 
 app.get('/pushData', function(req, res){
   //If not leader node, take chill
@@ -33,7 +33,7 @@ app.get('/pushData', function(req, res){
   else {
 	//Else perform the following commandments!
 	//1. Notify all followers about the client request (send the data too!) and store their response
-	//2. If majority of the followers didn't responded take chill!
+	//2. If majority of the followers didn't responded do nothing
 	//3. Else write the client data into this node and ask followers to do the same.
 
   	var request_id = Math.random().toString(36).substring(7); //Assigning a randomID
@@ -42,22 +42,32 @@ app.get('/pushData', function(req, res){
   	//Server then waits for the events with id = requestID
   	accept_dict[request_id] = 0;
   	io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
-
+  	var time_out = 100000000;
+  	while (time_out && accept_dict[request_id]<majority) time_out--;
+  	console.log(time_out)
+  	console.log(accept_dict[request_id])
+  	if (!time_out) {
+  		res.send("Empty");
+  		return;
+  	}
+  	res.send("Emitted!");
+  	return;
   }
   res.send("{'Status' : 'Success'}");
 });
 
-//Hey, a follower just connected to me
+// a follower connected to me
 io.on('connection', function(socket){	
   console.log("Hola, says a follower!");
-  #Client sends a Acknowledgement
-  socket.io('Acknowledgement', function(msg){
+  //Client sends a Acknowledgement
+  socket.on('Acknowledgement', function(msg){
   	request_id = msg['requestID'];
   	accept_dict[request_id] += 1;
   	if (accept_dict[request_id] == majority){
-  		io.emit('DataPushCommit', {'requestID' : requestID});
+  		console.log("I am here\n" + accept_dict[request_id])
+  		io.emit('DataPushCommit', {'requestID' : request_id});
   	}
-  }
+  });
 });
     
 
