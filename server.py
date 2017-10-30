@@ -68,7 +68,7 @@ election = random.randint(150, 300)
 heartbeatTime = 25
 commitTime = 50
 log = Log(server_id)
-
+shift = False
 electionTimeCall = False
 heartbeatTimeCall = False
 #This function will called every electionTime
@@ -98,11 +98,13 @@ def electionTimeout():
 		for destid in clusterMembers:
 			if destid != server_id:
 				sendMessage(destid, msg)
-	electionTimeCall = True
+	if shift:
+		electionTimeCall = True
+		shift = False
 	threading.Timer(.5, electionTimeout).start()
 
 def heartbeatTimeout():
-	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, shift currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if heartbeatTimeCall == True:
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
@@ -114,20 +116,16 @@ def heartbeatTimeout():
 		for destid in clusterMembers:
 			sendMessage(destid, msg)
 		electionTimeCall = False
+		shift = False
 	threading.Timer(.025, heartbeatTimeout).start()
 
 electionTimeout()
+electionTimeCall = True
 heartbeatTimeout()
 
 
-
-
-def appendEntries(term, leaderId, prevLogIndex, prevLogterm, entries, leaderCommit):
-	pass
-
-
 def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
-	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, shift, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	msg = []
 	if term >= currentTerm:
 		if term > currentTerm : #I am in the past
@@ -172,6 +170,61 @@ def replyVote(term, voteGranted):
 					matchIndex[destid] = log._length-1
 			newNullEntry()
 			heartbeatTimeCall = True
+
+
+
+def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
+	global recoveryMode, shift, log, commitIndex, electionTimeCall, currentTerm, lastKnownLeaderID
+	msg = {}
+	if term>=currentTerm:
+		electionTimeCall = False
+		shift = False
+		if (lastKnownLeaderID != leaderId):
+			print("Election result %d is the new leader"%(leaderId))
+		lastKnownLeaderID = leaderId
+		if term > currentTerm :
+			currentTerm = term
+		log_length = log._length
+		log_firstIndex = log._firstIndex
+		log_prevTerm = log._entries[prevLogIndex]._term
+
+		if (prevLogIndex < log_length and (log_length==log_firstIndex or log_prevTerm==prevLogTerm)):
+			if recoveryMode:
+				print("Last matching entry found. Exiting recovery mode.!")
+			recoveryMode = False
+			for entry in entries:
+				log.push(entry)
+			msg = {'rpc':'replyAppendEntries'
+			, 'term':currentTerm
+			, 'followerId':server_id
+			, 'entriesToAppend': len(entries)
+			, 'success':True};
+			if leaderCommit > commitIndex:
+				commitIndex = min(leaderCommit, log._length)
+				#TODO processEntries
+			shift = True
+		elif (recoveryMode==False or (recoveryMode and prevLogIndex < recoveryPrevLogIndex)):
+			while prevLogIndex < log._length:
+				log.pop()
+			if recoveryMode == False:
+				print("Log is outdated. Entering recovering mode.")
+			recoveryPrevLogIndex = prevLogIndex
+			msg = {'rpc':'replyAppendEntries'
+			, 'term':currentTerm
+			, 'followerId':server_id
+			, 'entriesToAppend': prevLogIndex
+			, 'success':False};
+		else:
+			msg = {'rpc':'replyAppendEntries'
+			, 'term':currentTerm
+			, 'followerId':server_id
+			, 'entriesToAppend': prevLogIndex
+			, 'success':False};
+		if msg != {}:
+			sendMessage(leaderId, msg)
+
+
+
 
 
 def newNullEntry():
