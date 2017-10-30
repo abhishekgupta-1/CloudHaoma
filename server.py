@@ -41,8 +41,8 @@ server_id = int(sys.argv[1])
 router_address = sys.argv[2]
 port_no = sys.argv[3]
 port_no2 = sys.argv[4]
-cluster_members = ast.literal_eval(sys.argv[5])
-cluster_members = [int(x) for x in cluster_members]
+clusterMembers = ast.literal_eval(sys.argv[5])
+clusterMembers = [int(x) for x in clusterMembers]
 sender_socket = context.socket(zmq.PUSH)
 sender_socket.connect(router_address +":"+ port_no)
 
@@ -60,8 +60,8 @@ maybeNeedToCommit = False
 lastApplied = False
 maxAppliedEntriesInLog = 10000
 hardLogSizeLimit = 100000
-nextIndex = []
-matchIndex = []
+nextIndex = {}
+matchIndex = {}
 recoveryMode = False
 recoveryPrevLogIndex = 0
 grantedVotes = 0
@@ -88,11 +88,12 @@ def electionTimeout():
 		for destid in clusterMembers:
 			if destid != server_id:
 				sendMessage(destid, msg)
+	electionTimeout = True
 	threading.Timer(1.0, electionTimeout).start()
 
-
 electionTimeout()
-electionTimeCall = True
+heartbeatTimeout()
+
 
 #Life
 while True:
@@ -106,6 +107,8 @@ while True:
 		appendEntries(message.term,message.leaderId,message.prevLogIndex,message.prevLogTerm,message.entries,message.leaderCommit)
 	elif rpc == 'requestVote':
 		requestVote(message.term, message.candidateId, message.lastLogIndex, message.lastLogTerm)
+	elif rpc == 'replyVote':
+		replyVote(message.term, message.voteGranted)
 	i+=1
 
 
@@ -138,3 +141,36 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 
 
 	else: #Sender is In the Past
+
+def replyVote(term, voteGranted):
+	if term > currentTerm:
+		currentTerm = term
+		state = 'f'
+		grantedVotes = 0
+		votedFor = None
+	elif: voteGranted and term==currentTerm and state=='c':
+		grantedVotes += 1
+		print("Received vote")
+		if grantedVotes > len(clusterMembers)/2:
+			print("Election win. Say Hi to new leader.")
+			state = 'l'
+			lastKnownLeaderID = server_id
+			grantedVotes = 0
+			for destid in clusterMembers:
+				if destid != server_id:
+					nextIndex[destid] = log._length
+					matchIndex[destid] = log._length-1
+			newNullEntry()
+			heartbeatTimeCall = True
+
+
+def newNullEntry():
+
+def heartbeatTimeout():
+	if heartbeatTimeCall == True:
+		msg = {'rpc':'appendEntries', 'term':currentTerm, 'leaderId': server_id, 'prevLogIndex':log._length-1, 'prevLogterm':.log._entries[-1]._term, entries=[], leaderCommit:commitIndex};
+		for destid in clusterMembers:
+		sendMessage(destid, msg)
+		electionTimeCall = False
+	threading.Timer(1.0, heartbeatTimeout).start()
+
