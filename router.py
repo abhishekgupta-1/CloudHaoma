@@ -33,7 +33,7 @@ sender_socket = context.socket(zmq.PUB)
 sender_socket.bind("tcp://*:5000");
 
 while True:
-	print "here"
 	data = receiver_socket.recv_json()
 	dest_id = data['dest']
-	sender_socket.send("%d %s"%(1, data))
+	print data
+	sender_socket.send("%d %s"%(dest_id, data))

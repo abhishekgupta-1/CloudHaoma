@@ -4,23 +4,22 @@ import random
 import ast
 import threading
 
-class LogEntry(Object):
+class LogEntry(object):
 	def __init__(self, clientId, clientSeqNum, data, term):
 		self._clientId = clientId
 		self._clientSeqNum = clientSeqNum
 		self._data = data
 		self._term = term
 
-class Log(Object):
+class Log(object):
 	def __init__(self, server_id):
 		self._firstIndex = 0
 		self._length = 1;
-		self._entries = []
-		self._serverid = server_id
+		self._entries = [LogEntry(server_id, 0, None, 0)]
 		pass
 	def push(self, value):
 		self._length += 1
-		self._entries.append(LogEntry(self._server_id, 0, None, 0))
+		self._entries.append(value)
 
 	def pop(self):
 		self._length -= 1
@@ -73,8 +72,19 @@ log = Log(server_id)
 electionTimeCall = False
 heartbeatTimeCall = False
 #This function will called every electionTime
+
+def sendMessage(destid, msg):
+	msg['dest'] = destid
+	sender_socket.send_json(msg)
+
+
 def electionTimeout():
+	global electionTimeCall
+	global currentTerm
+	global lastKnownLeaderID, log
+	global state, votedFor, grantedVotes, clusterMembers
 	if electionTimeCall == True:
+		print("here")
 		if lastKnownLeaderID == None:
 			print("No known leader for me, starting election!")
 		else:
@@ -83,13 +93,30 @@ def electionTimeout():
 		state = 'c'
 		votedFor = server_id
 		grantedVotes = 1
-		msg = {'rpc':'requestVote', 'term':currentTerm, 'candidateId':server_id, 
-		'lastLogIndex':log._length-1, 'lastLogTerm':log._entries[-1]._term};
+		msg = {'rpc':'requestVote'
+		, 'term':currentTerm
+		, 'candidateId':server_id
+		, 'lastLogIndex':log._length-1
+		, 'lastLogTerm':log._entries[-1]._term};
 		for destid in clusterMembers:
 			if destid != server_id:
 				sendMessage(destid, msg)
-	electionTimeout = True
+	electionTimeCall = True
 	threading.Timer(1.0, electionTimeout).start()
+
+def heartbeatTimeout():
+	if heartbeatTimeCall == True:
+		msg = {'rpc':'appendEntries'
+		, 'term':currentTerm
+		, 'leaderId': server_id
+		, 'prevLogIndex':log._length-1
+		, 'prevLogterm':log._entries[-1]._term
+		, 'entries' : []
+		, 'leaderCommit':commitIndex};
+		for destid in clusterMembers:
+			sendMessage(destid, msg)
+		electionTimeCall = False
+	threading.Timer(1.0, heartbeatTimeout).start()
 
 electionTimeout()
 heartbeatTimeout()
@@ -109,12 +136,10 @@ while True:
 		requestVote(message.term, message.candidateId, message.lastLogIndex, message.lastLogTerm)
 	elif rpc == 'replyVote':
 		replyVote(message.term, message.voteGranted)
-	i+=1
+	
 
-
-def sendMessage(destid, msg):
-	msg['dest'] = destid
-	sender_socket.send_json(msg)
+def appendEntries(term, leaderId, prevLogIndex, prevLogterm, entries, leaderCommit):
+	pass
 
 
 def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
@@ -123,7 +148,8 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 		if term > currentTerm : #I am in the past
 			print("Election in progress!")
 			currentTerm = term
-			if (state == 'l') print("Demoting to follower state.")
+			if (state == 'l'): 
+				print("Demoting to follower state.")
 			state = 'f'
 			votedFor = None
 			recoveryMode = None
@@ -135,12 +161,10 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':True};
 		else:
 			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False};
-	else:
+	else:  #Sender is In the Past
 		msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False}; 
 	sendMessage(candidateId, msg)
 
-
-	else: #Sender is In the Past
 
 def replyVote(term, voteGranted):
 	if term > currentTerm:
@@ -148,7 +172,7 @@ def replyVote(term, voteGranted):
 		state = 'f'
 		grantedVotes = 0
 		votedFor = None
-	elif: voteGranted and term==currentTerm and state=='c':
+	elif voteGranted==True and term==currentTerm and state=='c':
 		grantedVotes += 1
 		print("Received vote")
 		if grantedVotes > len(clusterMembers)/2:
@@ -165,12 +189,7 @@ def replyVote(term, voteGranted):
 
 
 def newNullEntry():
+	pass
 
-def heartbeatTimeout():
-	if heartbeatTimeCall == True:
-		msg = {'rpc':'appendEntries', 'term':currentTerm, 'leaderId': server_id, 'prevLogIndex':log._length-1, 'prevLogterm':.log._entries[-1]._term, entries=[], leaderCommit:commitIndex};
-		for destid in clusterMembers:
-		sendMessage(destid, msg)
-		electionTimeCall = False
-	threading.Timer(1.0, heartbeatTimeout).start()
+
 
