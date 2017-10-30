@@ -214,16 +214,61 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 			, 'followerId':server_id
 			, 'entriesToAppend': prevLogIndex
 			, 'success':False};
+	else:
+		msg = {'rpc':'replyAppendEntries'
+		, 'term':currentTerm
+		, 'followerId':server_id
+		, 'entriesToAppend': prevLogIndex
+		, 'success':False};
+	if msg != {}:
+		sendMessage(leaderId, msg)
+
+
+public replyAppendEntries(term, followerId, entriesToAppend, success):
+	global currentTerm, heartbeatTimeCall, grantedVotes, votedFor, state
+	global maybeNeedToCommit, matchIndex, nextIndex, log, recoveryMode
+	if (state == 'l' and term >= currentTerm):
+		if term > currentTerm:
+			currentTerm = term
+			state = 'f'
+			grantedVotes = 0
+			votedFor= None
+			heartbeatTimeCall = False
+		elif success:
+			matchIndex[followerId] += entriesToAppend
+			maybeNeedToCommit = True
+			if (nextIndex[followerId]<log._length):
+				msg = {'rpc':'appendEntries'
+				, 'term':currentTerm
+				, 'leaderId':server_id
+				, 'prevLogIndex':nextIndex[followerId]-1
+				, 'prevLogTerm':log._entries[nextIndex[followerId]-1]._term
+				, 'entries': log.slice(nextIndex[followerId], min(log._length, nextIndex[followerId]+100))
+				, 'leaderCommit':commitIndex}
+				nextIndex[followerId]+=min(log._length,nextIndex[followerId]+100)-nextIndex[followerId]
+				if nextIndex[followerId] == log._length:
+					if recoveryMode:
+						print("Follower %d log should be now in sync. Exiting recovery mode."%(followerId))
+						recoveryMode = False
+				sendMessage(followerId, msg)
+				commitEntries()
 		else:
-			msg = {'rpc':'replyAppendEntries'
-			, 'term':currentTerm
-			, 'followerId':server_id
-			, 'entriesToAppend': prevLogIndex
-			, 'success':False};
-		if msg != {}:
-			sendMessage(leaderId, msg)
-
-
+			if recoveryMode == False: print("Follower %d log is outdated. Entering recovery mode."%(followerId))
+			recoveryMode = True
+			nextIndex[followerId] = entriesToAppend
+			matchIndex[followerId] = nextIndex[followerId]-1
+			if log._entries[nextIndex[followerId]-1] != None:
+				msg = {'rpc':'appendEntries'
+				, 'term':currentTerm
+				, 'leaderId':server_id
+				, 'prevLogIndex':nextIndex[followerId]-1
+				, 'prevLogTerm':log._entries[nextIndex[followerId]-1]._term
+				, 'entries': [log._entries[nextIndex[followerId]]]
+				, 'leaderCommit':commitIndex}
+				nextIndex[followerId] += 1
+				sendMessage(followerId, message)
+			else: #Last log is behind oldest entry still in the log
+				pass
 
 
 
