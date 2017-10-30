@@ -66,12 +66,12 @@ recoveryMode = False
 recoveryPrevLogIndex = 0
 grantedVotes = 0
 election = random.randint(150, 300)
-heartbeatTie = 25
+heartbeatTime = 25
 commitTime = 50
 log = Log(server_id)
 
 electionTimeCall = False
-
+heartbeatTimeCall = False
 #This function will called every electionTime
 def electionTimeout():
 	if electionTimeCall == True:
@@ -85,23 +85,56 @@ def electionTimeout():
 		grantedVotes = 1
 		msg = {'rpc':'requestVote', 'term':currentTerm, 'candidateId':server_id, 
 		'lastLogIndex':log._length-1, 'lastLogTerm':log._entries[-1]._term};
-
 		for destid in clusterMembers:
 			if destid != server_id:
-				msg['dest'] = destid
-				sender_socket.send_json(msg)
+				sendMessage(destid, msg)
 	threading.Timer(1.0, electionTimeout).start()
 
 
 electionTimeout()
-electonTimeCall = True
+electionTimeCall = True
 
-i = 0
+#Life
 while True:
-	sender_socket.send_json({"dest":server_id, "i" : i})
-	print "here"
 	data = receiver_socket.recv()
-	print data
+	_, data = data.split(" ", 1)
+	msg = ast.literal_eval(data)
+	print msg
+	rpc = msg['rpc']
+
+	if rpc == 'appendEntries':
+		appendEntries(message.term,message.leaderId,message.prevLogIndex,message.prevLogTerm,message.entries,message.leaderCommit)
+	elif rpc == 'requestVote':
+		requestVote(message.term, message.candidateId, message.lastLogIndex, message.lastLogTerm)
 	i+=1
 
 
+def sendMessage(destid, msg):
+	msg['dest'] = destid
+	sender_socket.send_json(msg)
+
+
+def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
+	msg = []
+	if term >= currentTerm:
+		if term > currentTerm : #I am in the past
+			print("Election in progress!")
+			currentTerm = term
+			if (state == 'l') print("Demoting to follower state.")
+			state = 'f'
+			votedFor = None
+			recoveryMode = None
+			heartbeatTimeCall = False
+		if (votedFor == None or votedFor==candidateId) \
+		and (log._length==log._firstIndex or lastLogTerm >  log._entries[-1]._term or (lastLogTerm == log._entries[-1]._term and lastLogIndex>=log._length-1)):
+			votedFor = candidateId
+			print("Vote given to candidate %s"%(candidateId))
+			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':True};
+		else:
+			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False};
+	else:
+		msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False}; 
+	sendMessage(candidateId, msg)
+
+
+	else: #Sender is In the Past
