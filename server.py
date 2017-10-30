@@ -73,6 +73,11 @@ electionTimeCall = False
 heartbeatTimeCall = False
 #This function will called every electionTime
 
+
+for member in clusterMembers:
+	matchIndex[member] = 0
+	nextIndex[member] = 1
+
 def sendMessage(destid, msg):
 	msg['dest'] = destid
 	sender_socket.send_json(msg)
@@ -80,8 +85,8 @@ def sendMessage(destid, msg):
 
 def electionTimeout():
 	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global server_id, shift
 	if electionTimeCall == True:
-		print("here")
 		if lastKnownLeaderID == None:
 			print("No known leader for me, starting election!")
 		else:
@@ -104,7 +109,8 @@ def electionTimeout():
 	threading.Timer(.5, electionTimeout).start()
 
 def heartbeatTimeout():
-	global heartbeatTimeCall, shift currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, shift, currentTerm, server_id
+	global electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if heartbeatTimeCall == True:
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
@@ -114,7 +120,8 @@ def heartbeatTimeout():
 		, 'entries' : []
 		, 'leaderCommit':commitIndex};
 		for destid in clusterMembers:
-			sendMessage(destid, msg)
+			if destid != server_id:
+				sendMessage(destid, msg)
 		electionTimeCall = False
 		shift = False
 	threading.Timer(.025, heartbeatTimeout).start()
@@ -150,7 +157,8 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 
 
 def replyVote(term, voteGranted):
-	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor
+	global server_id, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if term > currentTerm:
 		currentTerm = term
 		state = 'f'
@@ -174,7 +182,8 @@ def replyVote(term, voteGranted):
 
 
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
-	global recoveryMode, shift, log, commitIndex, electionTimeCall, currentTerm, lastKnownLeaderID
+	global currentTerm, electionTimeCall, lastKnownLeaderID, currentTerm, log, shift
+	global recoveryMode, commitIndex, server_id
 	msg = {}
 	if term>=currentTerm:
 		electionTimeCall = False
@@ -224,9 +233,9 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 		sendMessage(leaderId, msg)
 
 
-public replyAppendEntries(term, followerId, entriesToAppend, success):
+def replyAppendEntries(term, followerId, entriesToAppend, success):
 	global currentTerm, heartbeatTimeCall, grantedVotes, votedFor, state
-	global maybeNeedToCommit, matchIndex, nextIndex, log, recoveryMode
+	global maybeNeedToCommit, matchIndex, nextIndex, log, recoveryMode, server_id
 	if (state == 'l' and term >= currentTerm):
 		if term > currentTerm:
 			currentTerm = term
@@ -273,7 +282,15 @@ public replyAppendEntries(term, followerId, entriesToAppend, success):
 
 
 def newNullEntry():
-	pass
+	global server_id, currentTerm
+	dummy = LogEntry(server_id, 0, {type:'NUL'}, currentTerm)
+	msg = {'rpc':'appendEntries'
+		, 'term':currentTerm
+		, 'leaderId':server_id
+		, 'prevLogIndex':log._length-1
+		, 'prevLogTerm':log._entries[log._length-1]._term
+		, 'entries': [dummy]
+		, 'leaderCommit':commitIndex}	
 
 
 
@@ -298,4 +315,9 @@ while True:
 			, message['lastLogTerm'])
 	elif rpc == 'replyVote':
 		replyVote(message['term'], message['voteGranted'])
+	elif rpc == 'replyAppendEntries':
+		replyAppendEntries(message['term']
+			, message['followerId']
+			, message['entriesToAppend']
+			, message['success'])
 	
