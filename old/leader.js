@@ -42,7 +42,7 @@ app.get('/pushData', function(req, res){
   	//Server then waits for the events with id = requestID
   	accept_dict[request_id] = 0;
   	io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
-  	var time_out = 1000000;
+  	// var time_out = 1000000;
     var my_int =   setInterval(function(){
     	// console.log(accept_dict[request_id])
       if (accept_dict[request_id] >= majority)
@@ -55,9 +55,13 @@ app.get('/pushData', function(req, res){
   res.send("{'Status' : 'Success'}");
 });
 
+
+
+
 // a follower connected to me
 io.on('connection', function(socket){	
   console.log("Hola, says a follower!");
+  
   //Client sends a Acknowledgement
   socket.on('Acknowledgement', function(msg){
   	request_id = msg['requestID'];
@@ -67,6 +71,7 @@ io.on('connection', function(socket){
   		io.emit('DataPushCommit', {'requestID' : request_id});
   	}
   });
+
 });
     
 
