@@ -99,16 +99,16 @@ def electionTimeout():
 			if destid != server_id:
 				sendMessage(destid, msg)
 	electionTimeCall = True
-	threading.Timer(.05, electionTimeout).start()
+	threading.Timer(.5, electionTimeout).start()
 
 def heartbeatTimeout():
-	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if heartbeatTimeCall == True:
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId': server_id
 		, 'prevLogIndex':log._length-1
-		, 'prevLogterm':log._entries[-1]._term
+		, 'prevLogTerm':log._entries[-1]._term
 		, 'entries' : []
 		, 'leaderCommit':commitIndex};
 		for destid in clusterMembers:
@@ -127,7 +127,7 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogterm, entries, leaderComm
 
 
 def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
-	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	msg = []
 	if term >= currentTerm:
 		if term > currentTerm : #I am in the past
@@ -152,7 +152,7 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 
 
 def replyVote(term, voteGranted):
-	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
+	global heartbeatTimeCall, currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if term > currentTerm:
 		currentTerm = term
 		state = 'f'
