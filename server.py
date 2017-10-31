@@ -4,6 +4,8 @@ import random
 import ast
 import threading
 
+#python2.7 server.py 1 tcp://127.0.0.1 12345 5000 ["1","2","3"]
+
 class LogEntry(object):
 	def __init__(self, clientId, clientSeqNum, data, term):
 		self._clientId = clientId
@@ -108,6 +110,7 @@ def electionTimeout():
 		shift = False
 	threading.Timer(.5, electionTimeout).start()
 
+
 def heartbeatTimeout():
 	global heartbeatTimeCall, shift, currentTerm, server_id
 	global electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
@@ -129,6 +132,7 @@ def heartbeatTimeout():
 electionTimeout()
 electionTimeCall = True
 heartbeatTimeout()
+
 
 
 def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
@@ -178,7 +182,6 @@ def replyVote(term, voteGranted):
 					matchIndex[destid] = log._length-1
 			newNullEntry()
 			heartbeatTimeCall = True
-
 
 
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
@@ -280,7 +283,6 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 				pass
 
 
-
 def newNullEntry():
 	global server_id, currentTerm
 	dummy = LogEntry(server_id, 0, {type:'NUL'}, currentTerm)
@@ -291,7 +293,6 @@ def newNullEntry():
 		, 'prevLogTerm':log._entries[log._length-1]._term
 		, 'entries': [dummy]
 		, 'leaderCommit':commitIndex}	
-
 
 
 #Life
