@@ -294,6 +294,24 @@ def newNullEntry():
 		, 'entries': [dummy]
 		, 'leaderCommit':commitIndex}	
 
+#commitIndex - Start commit from this index
+def commitEntries():
+	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
+	global newCommitIndex, currentTerm, log
+	if maybeNeedToCommit:
+		newCommitIndex = commitIndex-1
+	while True:
+		newCommitIndex += 1
+		numReplicas = 1
+		for node in clusterMembers:
+			if node != server_id:
+				if matchIndex[node] >= newCommitIndex: numReplicas+=1
+		if numReplicas <= len(clusterMembers)/2:
+			break
+	if log._entries[newCommitIndex]._term == currentTerm:
+		commitIndex = newCommitIndex
+		processEntries(commitIndex+1)
+
 
 #Life
 while True:
