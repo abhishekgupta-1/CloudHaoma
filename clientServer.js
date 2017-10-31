@@ -21,7 +21,7 @@ listen_socket.on('message', function(){
   console.log(args[0].toString('utf8'));
   var message = JSON.parse(args[0].toString('utf8'))
   console.log(message);
-  accept_dict[message['requestID']] = message['status'];
+  accept_dict[message['requestId']] = message['status'];
 });
 
 // i = 5;
@@ -37,20 +37,30 @@ listen_socket.on('message', function(){
 var accept_dict = [],
   serverID = process.argv[6];
 
+var counter = 0
+
 app.get('/pushData', function(req, res){
 	var request_id = Math.random().toString(36).substring(7); //Assigning a randomID
 	console.log("RequestID assigned : " + request_id)
 	accept_dict[request_id] = 'failure';
+  counter += 1
   msg = {'clientId':serverID
   , 'dest': ''
   , 'requestId' : request_id
-  , 'request_data' : '123'
+  , 'request_data' : '123'+counter
   , 'rpc':'addEntry'
   , 'fileInfo' : 'bee.txt'};
   sender_socket.send(msg);
 	//io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
 	// var time_out = 1000000;
+  var count = 20;
   var my_int =   setInterval(function(){
+   if (count == 0) {
+    res.send("Not added!")
+    clearInterval(my_int)
+    return
+   }
+   count--;
    if (accept_dict[request_id] == "success"){
     	console.log("Log accepted");
       res.send("Log added!");

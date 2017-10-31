@@ -7,9 +7,9 @@ import threading
 #python2.7 server.py 1 tcp://127.0.0.1 12345 5000 ["1","2","3"]
 
 class LogEntry(object):
-	def __init__(self, clientId, clientSeqNum, data, term):
+	def __init__(self, clientId, requestId, data, term):
 		self._clientId = clientId
-		self._clientSeqNum = clientSeqNum
+		self._requestId = request_id
 		self._data = data
 		self._term = term
 
@@ -189,6 +189,7 @@ def replyVote(term, voteGranted):
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
 	global currentTerm, electionTimeCall, lastKnownLeaderID, currentTerm, log, shift
 	global recoveryMode, commitIndex, server_id
+	processen= False
 	msg = {}
 	if term>=currentTerm:
 		electionTimeCall = False
@@ -215,7 +216,9 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 			, 'success':True};
 			if leaderCommit > commitIndex:
 				commitIndex = min(leaderCommit, log._length)
+				processEn = True
 				#TODO processEntries
+			electionTimeCall = False #check this statement if bug occurs
 			shift = True
 		elif (recoveryMode==False or (recoveryMode and prevLogIndex < recoveryPrevLogIndex)):
 			while prevLogIndex < log._length:
@@ -236,6 +239,8 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 		, 'success':False};
 	if msg != {}:
 		sendMessage(leaderId, msg)
+	if processEn:
+		processEntries(commitIndex)
 
 
 def replyAppendEntries(term, followerId, entriesToAppend, success):
@@ -301,11 +306,20 @@ def write_to_file(msg):
 	with open(msg['fileName'], "a") as myfile:
 	    myfile.write("%s"%(msg['data']))
 
+
 #Bad!! TODO: make this async IO
 def processEntries(upTo):
-	global lastApplied, log
+	global server_id, state,lastApplied, log
 	for entryIndex in range(lastApplied, upTo):
-		write_to_file(log._entries[entryIndex]._data)
+		entry = log._entries[entryIndex]
+		if state == 'l':
+			clientId = entry._clientId
+			requestId = entry._requestId
+			msg = {'dest':clientId
+			, 'requestId':'requestId'
+			, 'status' : 'Success'};
+			sendMessage(clientId, msg);
+		write_to_file(entry._data)
 	lastApplied = upTo
 
 
@@ -331,6 +345,35 @@ def commitEntries():
 	if processEn:
 		processEntries(commitIndex+1) #Why commitIndex + 1??
 
+
+def addEntry(requestId, request_data, clientId):
+	global currentTerm, state, server_id, log, heartbeatTimeCall, lastKnownLeaderID
+	global heartbeatTimeCall, shiftHeart, shift, electionTimeCall
+	if state == 'l':
+		entry = LogEntry(clientId, requestId, request_data, currentTerm)
+		msg = {'rpc':'appendEntries'
+		, 'term':currentTerm
+		, 'leaderId':server_id
+		, 'prevLogIndex': len(log._length)
+		, 'prevLogTerm' : log._entires[-1]._term
+		, 'entries': [entry]
+		, 'leaderCommit':commitIndex};
+		for node in clusterMembers:
+			if node != server_id:
+				if nextIndex[node] == log._length:
+					nextIndex[node] += 1
+					sendMessage(node, msg)
+		log.push(entry)
+		heartbeatTimeCall = False
+		shiftHeart = True
+		electionTimeCall = False
+		shift = True
+	else: #forward to leader
+		msg = {'clientId':clientId
+		, 'requestId' : request_id
+		, 'request_data' : request_data
+		, 'rpc':'addEntry'};
+		sendMessage(lastKnownLeaderID, msg);
 
 
 
@@ -366,30 +409,8 @@ while True:
 			, message['clientId'])
 
 
-def addEntry(requestId, request_data, clientId):
-	global currentTerm, state, server_id, log, heartbeatTimeCall
-	global heartbeatTimeCall, shiftHeart, shift, electionTimeCall
-	if state == 'l':
-		entry = LogEntry(clientId, 1, request_data, currentTerm)
-		msg = {'rpc':'appendEntries'
-		, 'term':currentTerm
-		, 'leaderId':server_id
-		, 'prevLogIndex': len(log._length)
-		, 'prevLogTerm' : log._entires[-1]._term
-		, 'entries': [entry]
-		, 'leaderCommit':commitIndex};
-		for node in clusterMembers:
-			if node != server_id:
-				if nextIndex[node] == log._length:
-					nextIndex[node] += 1
-					sendMessage(node, msg)
-		log.push(entry)
-		heartbeatTimeCall = False
-		shiftHeart = True
-		electionTimeCall = False
-		shift = True
-	else:
-		#forward to leader
+
+		
 
   # msg = {'clientId':serverID
   # , 'dest': ''
