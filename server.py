@@ -58,9 +58,7 @@ votedFor = None
 lastKnownLeaderID = None
 commitIndex = 0
 maybeNeedToCommit = False
-lastApplied = False
-maxAppliedEntriesInLog = 10000
-hardLogSizeLimit = 100000
+lastApplied = 0
 nextIndex = {}
 matchIndex = {}
 recoveryMode = False
@@ -294,10 +292,24 @@ def newNullEntry():
 		, 'entries': [dummy]
 		, 'leaderCommit':commitIndex}	
 
+
+def write_to_file(msg):
+	with open(msg['fileName'], "a") as myfile:
+	    myfile.write("%s"%(msg['data']))
+
+#Bad!! TODO: make this async IO
+def processEntries(upTo):
+	global lastApplied, log
+	for entryIndex in range(lastApplied, upTo):
+		write_to_file(log._entries[entryIndex]._data)
+	lastApplied = upTo
+
+
 #commitIndex - Start commit from this index
 def commitEntries():
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
 	global newCommitIndex, currentTerm, log
+	processEn = False
 	if maybeNeedToCommit:
 		newCommitIndex = commitIndex-1
 	while True:
@@ -310,7 +322,12 @@ def commitEntries():
 			break
 	if log._entries[newCommitIndex]._term == currentTerm:
 		commitIndex = newCommitIndex
-		processEntries(commitIndex+1)
+		processEn = True
+	maybeNeedToCommit = False
+	if processEn:
+		processEntries(commitIndex+1) #Why commitIndex + 1??
+
+
 
 
 #Life
