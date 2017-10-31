@@ -4,7 +4,7 @@ import random
 import ast
 import threading
 
-#python2.7 server.py 1 tcp://127.0.0.1 12345 5000 ["1","2","3"]
+#python2.7 server.py 1 tcp://127.0.0.1 12345 ["1","2","3"]
 
 class LogEntry(object):
 	def __init__(self, clientId, requestId, data, term):
@@ -41,8 +41,8 @@ context = zmq.Context()
 server_id = int(sys.argv[1])
 router_address = sys.argv[2]
 port_no = sys.argv[3]
-port_no2 = sys.argv[4]
-clusterMembers = ast.literal_eval(sys.argv[5])
+port_no2 = '5000'
+clusterMembers = ast.literal_eval(sys.argv[4])
 clusterMembers = [int(x) for x in clusterMembers]
 sender_socket = context.socket(zmq.PUSH)
 sender_socket.connect(router_address +":"+ port_no)
@@ -354,8 +354,8 @@ def addEntry(requestId, request_data, clientId):
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId':server_id
-		, 'prevLogIndex': len(log._length)
-		, 'prevLogTerm' : log._entires[-1]._term
+		, 'prevLogIndex': (log._length)
+		, 'prevLogTerm' : log._entries[-1]._term
 		, 'entries': [entry]
 		, 'leaderCommit':commitIndex};
 		for node in clusterMembers:
@@ -368,9 +368,9 @@ def addEntry(requestId, request_data, clientId):
 		shiftHeart = True
 		electionTimeCall = False
 		shift = True
-	else: #forward to leader
+	elif lastKnownLeaderID != None: #forward to leader
 		msg = {'clientId':clientId
-		, 'requestId' : request_id
+		, 'requestId' : requestId
 		, 'request_data' : request_data
 		, 'rpc':'addEntry'};
 		sendMessage(lastKnownLeaderID, msg);
