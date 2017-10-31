@@ -69,6 +69,7 @@ heartbeatTime = 25
 commitTime = 50
 log = Log(server_id)
 shift = False
+shiftHeart = False
 electionTimeCall = False
 heartbeatTimeCall = False
 #This function will called every electionTime
@@ -110,7 +111,7 @@ def electionTimeout():
 
 
 def heartbeatTimeout():
-	global heartbeatTimeCall, shift, currentTerm, server_id
+	global heartbeatTimeCall, shift, currentTerm, server_id, shiftHeart
 	global electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if heartbeatTimeCall == True:
 		msg = {'rpc':'appendEntries'
@@ -125,6 +126,9 @@ def heartbeatTimeout():
 				sendMessage(destid, msg)
 		electionTimeCall = False
 		shift = False
+	if shiftHeart == True:
+		heartbeatTimeCall = True
+		shiftHeart = False
 	threading.Timer(.025, heartbeatTimeout).start()
 
 electionTimeout()
@@ -356,4 +360,40 @@ while True:
 			, message['followerId']
 			, message['entriesToAppend']
 			, message['success'])
-	
+	elif rpc == 'addEntry':
+		addEntry(message['requestId']
+			, message['request_data'],
+			, message['clientId'])
+
+
+def addEntry(requestId, request_data, clientId):
+	global currentTerm, state, server_id, log, heartbeatTimeCall
+	global heartbeatTimeCall, shiftHeart, shift, electionTimeCall
+	if state == 'l':
+		entry = LogEntry(clientId, 1, request_data, currentTerm)
+		msg = {'rpc':'appendEntries'
+		, 'term':currentTerm
+		, 'leaderId':server_id
+		, 'prevLogIndex': len(log._length)
+		, 'prevLogTerm' : log._entires[-1]._term
+		, 'entries': [entry]
+		, 'leaderCommit':commitIndex};
+		for node in clusterMembers:
+			if node != server_id:
+				if nextIndex[node] == log._length:
+					nextIndex[node] += 1
+					sendMessage(node, msg)
+		log.push(entry)
+		heartbeatTimeCall = False
+		shiftHeart = True
+		electionTimeCall = False
+		shift = True
+	else:
+		#forward to leader
+
+  # msg = {'clientId':serverID
+  # , 'dest': ''
+  # , 'requestId' : request_id
+  # , 'request_data' : '123'
+  # , 'rpc':'addEntry'
+  # , 'fileInfo' : 'bee.txt'};
