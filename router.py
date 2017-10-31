@@ -23,6 +23,6 @@ while True:
 	dest_id = str(data['dest'])
 	print data
 	if dest_id not in Servers:
-		sender_socket.send("%s %s"%((dest_id), data))
+		sender_socket.send("%s %s"%(dest_id, data))
 	else:
 		client_socket.send("%s"%(json.dumps(data)))

@@ -17,11 +17,13 @@ class Log(object):
 	def __init__(self, server_id):
 		self._firstIndex = 0
 		self._length = 1;
-		self._entries = [LogEntry(server_id, 0, None, 0)]
+		self._entries = [LogEntry(server_id, 0, None, 0), ]
 
 	def push(self, value):
 		self._length += 1
-		self._entries.append(value)
+		print value, type(value)
+		trans = LogEntry(value['_clientId'], value['_requestId'], value['_data'], value['_term'])
+		self._entries.append(trans)
 
 	def pop(self):
 		self._length -= 1
@@ -135,6 +137,21 @@ electionTimeout()
 electionTimeCall = True
 heartbeatTimeout()
 
+#Bad!! TODO: make this async IO
+def processEntries(upTo):
+	global server_id, state,lastApplied, log
+	for entryIndex in range(lastApplied, upTo):
+		entry = log._entries[entryIndex]
+		if state == 'l':
+			clientId = entry._clientId
+			requestId = entry._requestId
+			msg = {'dest':clientId
+			, 'requestId':'requestId'
+			, 'status' : 'Success'};
+			sendMessage(clientId, msg);
+		write_to_file(json_loads(entry._data))
+	lastApplied = upTo
+
 
 
 def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
@@ -201,7 +218,9 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 			currentTerm = term
 		log_length = log._length
 		log_firstIndex = log._firstIndex
-		log_prevTerm = log._entries[prevLogIndex]._term
+		log_prevTerm = 10000000 #Possibly faulty!
+		if prevLogIndex < log_length:
+			log_prevTerm = log._entries[prevLogIndex]._term
 
 		if (prevLogIndex < log_length and (log_length==log_firstIndex or log_prevTerm==prevLogTerm)):
 			if recoveryMode:
@@ -238,6 +257,7 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 		, 'entriesToAppend': prevLogIndex
 		, 'success':False};
 	if msg != {}:
+		# print ("leaderid = %s"%(leaderId))
 		sendMessage(leaderId, msg)
 	if processEn:
 		processEntries(commitIndex)
@@ -282,10 +302,10 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 				, 'leaderId':server_id
 				, 'prevLogIndex':nextIndex[followerId]-1
 				, 'prevLogTerm':log._entries[nextIndex[followerId]-1]._term
-				, 'entries': [log._entries[nextIndex[followerId]]]
+				, 'entries': [log._entries[nextIndex[followerId]].__dict__]
 				, 'leaderCommit':commitIndex}
 				nextIndex[followerId] += 1
-				sendMessage(followerId, message)
+				sendMessage(followerId, msg)
 			else: #Last log is behind oldest entry still in the log
 				pass
 
@@ -298,7 +318,7 @@ def newNullEntry():
 		, 'leaderId':server_id
 		, 'prevLogIndex':log._length-1
 		, 'prevLogTerm':log._entries[log._length-1]._term
-		, 'entries': [dummy]
+		, 'entries': [dummy.__dict__]
 		, 'leaderCommit':commitIndex}	
 
 
@@ -307,20 +327,6 @@ def write_to_file(msg):
 	    myfile.write("%s"%(msg['data']))
 
 
-#Bad!! TODO: make this async IO
-def processEntries(upTo):
-	global server_id, state,lastApplied, log
-	for entryIndex in range(lastApplied, upTo):
-		entry = log._entries[entryIndex]
-		if state == 'l':
-			clientId = entry._clientId
-			requestId = entry._requestId
-			msg = {'dest':clientId
-			, 'requestId':'requestId'
-			, 'status' : 'Success'};
-			sendMessage(clientId, msg);
-		write_to_file(json_loads(entry._data))
-	lastApplied = upTo
 
 
 #commitIndex - Start commit from this index
@@ -356,14 +362,14 @@ def addEntry(requestId, request_data, clientId):
 		, 'leaderId':server_id
 		, 'prevLogIndex': (log._length)
 		, 'prevLogTerm' : log._entries[-1]._term
-		, 'entries': [entry]
+		, 'entries': [entry.__dict__]
 		, 'leaderCommit':commitIndex};
 		for node in clusterMembers:
 			if node != server_id:
 				if nextIndex[node] == log._length:
 					nextIndex[node] += 1
 					sendMessage(node, msg)
-		log.push(entry)
+		log.push(entry.__dict__)
 		heartbeatTimeCall = False
 		shiftHeart = True
 		electionTimeCall = False
@@ -380,9 +386,9 @@ def addEntry(requestId, request_data, clientId):
 #Life
 while True:
 	message = receiver_socket.recv()
-	_, message = message.split(" ", 1)
+	sender_id, message = message.split(" ", 1)
 	message = ast.literal_eval(message)
-	print message, type(message)
+	print sender_id, message, type(message)
 	rpc = message['rpc']
 	if rpc == 'appendEntries':
 		appendEntries(message['term'],
