@@ -1,6 +1,7 @@
 import sys
 import zmq
 import json
+import ast
 
 #python2.7 router.py 12345 ["5"] false
 
@@ -15,7 +16,7 @@ client_socket = context.socket(zmq.PUSH)
 client_socket.bind("tcp://*:5002")
 
 Servers = ast.literal_eval(sys.argv[2])
-Servers = [int(x) for x in clusterMembers]
+Servers = [int(x) for x in Servers]
 
 while True:
 	data = receiver_socket.recv_json()

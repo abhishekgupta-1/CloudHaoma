@@ -9,7 +9,7 @@ import threading
 class LogEntry(object):
 	def __init__(self, clientId, requestId, data, term):
 		self._clientId = clientId
-		self._requestId = request_id
+		self._requestId = requestId
 		self._data = data
 		self._term = term
 
@@ -189,7 +189,7 @@ def replyVote(term, voteGranted):
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
 	global currentTerm, electionTimeCall, lastKnownLeaderID, currentTerm, log, shift
 	global recoveryMode, commitIndex, server_id
-	processen= False
+	processEn= False
 	msg = {}
 	if term>=currentTerm:
 		electionTimeCall = False
@@ -319,7 +319,7 @@ def processEntries(upTo):
 			, 'requestId':'requestId'
 			, 'status' : 'Success'};
 			sendMessage(clientId, msg);
-		write_to_file(entry._data)
+		write_to_file(json_loads(entry._data))
 	lastApplied = upTo
 
 
@@ -405,7 +405,7 @@ while True:
 			, message['success'])
 	elif rpc == 'addEntry':
 		addEntry(message['requestId']
-			, message['request_data'],
+			, message['request_data']
 			, message['clientId'])
 
 

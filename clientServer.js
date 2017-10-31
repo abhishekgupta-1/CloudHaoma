@@ -1,3 +1,5 @@
+//node clientServer.js 2 tcp://172.0.0.1 12345 5002 4
+
 id = process.argv[2]
 router_address = process.argv[3]
 send_port_no = process.argv[4]
@@ -24,56 +26,58 @@ listen_socket.on('message', function(){
   accept_dict[message['requestId']] = message['status'];
 });
 
-// i = 5;
-// function send_mess(){
+data = {'dest':1}
+i = 5;
+function send_mess(){
+  sender_socket.send(JSON.stringify(data)); 
+  if (i!=0)
+    setTimeout(send_mess, 500);
+  i--;
+}
+send_mess();
 
-//   sender_socket.send(JSON.stringify(data)); 
-//   if (i!=0)
-//     setTimeout(send_mess, 500);
-//   i--;
-// }
-// send_mess();
+// var accept_dict = [],
+//   serverID = process.argv[6];
 
-var accept_dict = [],
-  serverID = process.argv[6];
+// var counter = 0
 
-var counter = 0
+// app.get('/pushData', function(req, res){
+// 	var request_id = Math.random().toString(36).substring(7); //Assigning a randomID
+// 	console.log("RequestID assigned : " + request_id)
+// 	accept_dict[request_id] = 'failure';
+//   counter += 1
+//   msg = {'clientId':serverID
+//   , 'dest': 2
+//   , 'requestId' : request_id
+//   , 'request_data' : JSON.stringify({'value':'123'+counter, 'fileName': 'abc' + counter })
+//   , 'rpc':'addEntry'
+//   };
 
-app.get('/pushData', function(req, res){
-	var request_id = Math.random().toString(36).substring(7); //Assigning a randomID
-	console.log("RequestID assigned : " + request_id)
-	accept_dict[request_id] = 'failure';
-  counter += 1
-  msg = {'clientId':serverID
-  , 'dest': ''
-  , 'requestId' : request_id
-  , 'request_data' : '123'+counter
-  , 'rpc':'addEntry'
-  , 'fileInfo' : 'bee.txt'};
-  sender_socket.send(msg);
-	//io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
-	// var time_out = 1000000;
-  var count = 20;
-  var my_int =   setInterval(function(){
-   if (count == 0) {
-    res.send("Not added!")
-    clearInterval(my_int)
-    return
-   }
-   count--;
-   if (accept_dict[request_id] == "success"){
-    	console.log("Log accepted");
-      res.send("Log added!");
-      clearInterval(my_int);
-    }
-  },100);
-  // while (time_out && accept_dict[request_id]<majority) time_out--;
-	return;
-});
+//   sender_socket.send(JSON.stringify(msg));
+// 	console.log("here")
+//   //io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
+// 	// var time_out = 1000000;
+//   var count = 20;
+//   var my_int =   setInterval(function(){
+//    if (count == 0) {
+//     res.send("Not added!")
+//     clearInterval(my_int)
+//     return
+//    }
+//    count--;
+//    if (accept_dict[request_id] == "success"){
+//     	console.log("Log accepted");
+//       res.send("Log added!");
+//       clearInterval(my_int);
+//     }
+//   },100);
+//   // while (time_out && accept_dict[request_id]<majority) time_out--;
+// 	return;
+// });
 
 
 
-//Start http server
-http.listen(3000, function(){
-  console.log('listening on *:3000');
-});
+// //Start http server
+// http.listen(3000, function(){
+//   console.log('listening on *:3000');
+// });
