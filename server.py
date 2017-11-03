@@ -3,6 +3,7 @@ import sys
 import random
 import ast
 import threading
+import json
 
 #python2.7 server.py 1 tcp://127.0.0.1 12345 ["1","2","3"]
 
@@ -17,7 +18,7 @@ class Log(object):
 	def __init__(self, server_id):
 		self._firstIndex = 0
 		self._length = 1;
-		self._entries = [LogEntry(server_id, 0, None, 0), ]
+		self._entries = [LogEntry(-1, 0, None, 0), ]
 
 	def push(self, value):
 		self._length += 1
@@ -142,14 +143,16 @@ def processEntries(upTo):
 	global server_id, state,lastApplied, log
 	for entryIndex in range(lastApplied, upTo):
 		entry = log._entries[entryIndex]
-		if state == 'l':
+		if state == 'l' and entry._clientId!=-1:
 			clientId = entry._clientId
 			requestId = entry._requestId
 			msg = {'dest':clientId
 			, 'requestId':'requestId'
 			, 'status' : 'Success'};
 			sendMessage(clientId, msg);
-		write_to_file(json_loads(entry._data))
+		print entry.__dict__, type(entry)
+		print entry._data, type(entry._data)
+		write_to_file(entry._data)
 	lastApplied = upTo
 
 
@@ -267,7 +270,7 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 
 def replyAppendEntries(term, followerId, entriesToAppend, success):
 	global currentTerm, heartbeatTimeCall, grantedVotes, votedFor, state, shift, electionTimeCall
-	global maybeNeedToCommit, matchIndex, nextIndex, log, recoveryMode, server_id
+	global maybeNeedToCommit, matchIndex, nextIndex, log, recoveryMode, server_id, commitIndex
 	if (state == 'l' and term >= currentTerm):
 		if term > currentTerm:
 			currentTerm = term
@@ -288,7 +291,7 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 				, 'leaderId':server_id
 				, 'prevLogIndex':nextIndex[followerId]-1
 				, 'prevLogTerm':log._entries[nextIndex[followerId]-1]._term
-				, 'entries': log.slice(nextIndex[followerId], min(log._length, nextIndex[followerId]+100))
+				, 'entries': [x.__dict__ for x in log.slice(nextIndex[followerId], min(log._length, nextIndex[followerId]+100))]
 				, 'leaderCommit':commitIndex}
 				nextIndex[followerId]+=min(log._length,nextIndex[followerId]+100)-nextIndex[followerId]
 				if nextIndex[followerId] == log._length:
@@ -318,7 +321,7 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 
 def newNullEntry():
 	global server_id, currentTerm, clusterMembers, server_id, log
-	dummy = LogEntry(server_id, 0, {type:'NUL'}, currentTerm)
+	dummy = LogEntry(-1, 0, None, currentTerm)
 	msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId':server_id
@@ -333,8 +336,9 @@ def newNullEntry():
 
 
 def write_to_file(msg):
-	with open(msg['fileName'], "a") as myfile:
-	    myfile.write("%s"%(msg['data']))
+	if msg is not None:
+		with open(msg['fileName'], "a") as myfile:
+		    myfile.write("%s"%(msg['data']))
 
 
 
@@ -354,12 +358,12 @@ def commitEntries():
 				if matchIndex[node] >= newCommitIndex: numReplicas+=1
 		if numReplicas <= len(clusterMembers)/2:
 			break
-	if log._entries[newCommitIndex]._term == currentTerm:
+	if log._entries[newCommitIndex-1]._term == currentTerm: #Possible faulty
 		commitIndex = newCommitIndex
 		processEn = True
 	maybeNeedToCommit = False
 	if processEn:
-		processEntries(commitIndex+1) #Why commitIndex + 1??
+		processEntries(commitIndex) #Why commitIndex + 1?? #Possible fault
 
 
 def addEntry(requestId, request_data, clientId):
