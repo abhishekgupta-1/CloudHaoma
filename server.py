@@ -167,7 +167,7 @@ def processEntries(upTo):
 			clientId = entry._clientId
 			requestId = entry._requestId
 			msg = {'dest':clientId
-			, 'requestId':'requestId'
+			, 'requestId':requestId
 			, 'status' : 'Success'};
 			sendMessage(clientId, msg);
 		print entry.__dict__, type(entry)
@@ -381,7 +381,7 @@ def addEntry(requestId, request_data, clientId):
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId':server_id
-		, 'prevLogIndex': (log._length)-1
+		, 'prevLogIndex': (log._length)-1	
 		, 'prevLogTerm' : log._entries[-1]._term
 		, 'entries': [entry.__dict__]
 		, 'leaderCommit':commitIndex};

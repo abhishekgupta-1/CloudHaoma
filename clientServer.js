@@ -24,16 +24,16 @@ listen_socket.on('message', function(){
   accept_dict[message['requestId']] = message['status'];
 });
 
-data = {'dest':1}
-i = 5;
-function send_mess(){
-  console.log("here")
-  sender_socket.send(JSON.stringify(data)); 
-  if (i!=0)
-    setTimeout(send_mess, 500);
-  i--;
-}
-send_mess();
+// data = {'dest':1}
+// i = 5;
+// function send_mess(){
+//   console.log("here")
+//   sender_socket.send(JSON.stringify(data)); 
+//   if (i!=0)
+//     setTimeout(send_mess, 500);
+//   i--;
+// }
+// send_mess();
 
 var accept_dict = [];
 var counter = 0;
@@ -61,8 +61,7 @@ app.get('/pushData', function(req, res){
     clearInterval(my_int)
     return
    }
-   count--;
-   if (accept_dict[request_id] == "success"){
+   if (accept_dict[request_id] == "Success"){
     	console.log("Log accepted");
       res.send("Log added!");
       clearInterval(my_int);
