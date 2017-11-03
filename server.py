@@ -67,7 +67,7 @@ recoveryMode = False
 recoveryPrevLogIndex = 0
 grantedVotes = 0
 election = random.randint(150, 300)
-heartbeatTime = 25
+heartbeatTime = 100
 commitTime = 50
 log = Log(server_id)
 shift = False
@@ -88,7 +88,7 @@ def sendMessage(destid, msg):
 
 def electionTimeout():
 	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
-	global server_id, shift
+	global server_id, shift, election
 	if electionTimeCall == True:
 		if lastKnownLeaderID == None:
 			print("No known leader for me, starting election!")
@@ -109,11 +109,11 @@ def electionTimeout():
 	if shift:
 		electionTimeCall = True
 		shift = False
-	threading.Timer(.5, electionTimeout).start()
+	threading.Timer(election/1000.0, electionTimeout).start()
 
 
 def heartbeatTimeout():
-	global heartbeatTimeCall, shift, currentTerm, server_id, shiftHeart
+	global heartbeatTimeCall, shift, currentTerm, server_id, shiftHeart, heartbeatTime
 	global electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
 	if heartbeatTimeCall == True:
 		msg = {'rpc':'appendEntries'
@@ -131,7 +131,7 @@ def heartbeatTimeout():
 	if shiftHeart == True:
 		heartbeatTimeCall = True
 		shiftHeart = False
-	threading.Timer(.025, heartbeatTimeout).start()
+	threading.Timer(heartbeatTime/1000.0, heartbeatTimeout).start()
 
 electionTimeout()
 electionTimeCall = True
