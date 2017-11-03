@@ -172,7 +172,7 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 			votedFor = candidateId
 			print("Vote given to candidate %s"%(candidateId))
 			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':True}
-			electionTimeCall = False
+			electionTimeCall = False #Reset election Timeout
 			shift = True
 		else:
 			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False};
@@ -201,8 +201,9 @@ def replyVote(term, voteGranted):
 				if destid != server_id:
 					nextIndex[destid] = log._length
 					matchIndex[destid] = log._length-1
-			newNullEntry()
 			heartbeatTimeCall = True
+			electionTimeCall = False
+			newNullEntry()
 
 
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
@@ -238,10 +239,10 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 			if leaderCommit > commitIndex:
 				commitIndex = min(leaderCommit, log._length)
 				processEn = True
-			electionTimeCall = False 
+			electionTimeCall = False #Reset electionTimeOut
 			shift = True
-		elif (recoveryMode==False or (recoveryMode and prevLogIndex < recoveryPrevLogIndex)):
-			while prevLogIndex < log._length:
+		elif recoveryMode==False or (recoveryMode and prevLogIndex < recoveryPrevLogIndex):
+			while log._length > prevLogIndex:
 				log.pop()
 			if recoveryMode == False:
 				print("Log is outdated. Entering recovering mode.")
@@ -265,7 +266,7 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 
 
 def replyAppendEntries(term, followerId, entriesToAppend, success):
-	global currentTerm, heartbeatTimeCall, grantedVotes, votedFor, state
+	global currentTerm, heartbeatTimeCall, grantedVotes, votedFor, state, shift, electionTimeCall
 	global maybeNeedToCommit, matchIndex, nextIndex, log, recoveryMode, server_id
 	if (state == 'l' and term >= currentTerm):
 		if term > currentTerm:
@@ -274,6 +275,10 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 			grantedVotes = 0
 			votedFor= None
 			heartbeatTimeCall = False
+			#Starting electionTimeout(Case leader got disconnected, rest of nodes moves on, without starting electionTimeout this node will become passive) 
+			#Possibly faulty
+			electionTimeCall = False	
+			shift = True
 		elif success:
 			matchIndex[followerId] += entriesToAppend
 			maybeNeedToCommit = True
