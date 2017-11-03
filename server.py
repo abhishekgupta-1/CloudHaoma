@@ -167,11 +167,13 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 			votedFor = None
 			recoveryMode = None
 			heartbeatTimeCall = False
-		if (votedFor == None or votedFor==candidateId) \
+		if (votedFor == None) \
 		and (log._length==log._firstIndex or lastLogTerm >  log._entries[-1]._term or (lastLogTerm == log._entries[-1]._term and lastLogIndex>=log._length-1)):
 			votedFor = candidateId
 			print("Vote given to candidate %s"%(candidateId))
-			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':True};
+			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':True}
+			electionTimeCall = False
+			shift = True
 		else:
 			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False};
 	else:  #Sender is In the Past
@@ -236,8 +238,7 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 			if leaderCommit > commitIndex:
 				commitIndex = min(leaderCommit, log._length)
 				processEn = True
-				#TODO processEntries
-			electionTimeCall = False #check this statement if bug occurs
+			electionTimeCall = False 
 			shift = True
 		elif (recoveryMode==False or (recoveryMode and prevLogIndex < recoveryPrevLogIndex)):
 			while prevLogIndex < log._length:
@@ -311,7 +312,7 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 
 
 def newNullEntry():
-	global server_id, currentTerm
+	global server_id, currentTerm, clusterMembers, server_id, log
 	dummy = LogEntry(server_id, 0, {type:'NUL'}, currentTerm)
 	msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
@@ -319,7 +320,11 @@ def newNullEntry():
 		, 'prevLogIndex':log._length-1
 		, 'prevLogTerm':log._entries[log._length-1]._term
 		, 'entries': [dummy.__dict__]
-		, 'leaderCommit':commitIndex}	
+		, 'leaderCommit':commitIndex}
+	for clusterMember in clusterMembers:
+		if clusterMember != server_id:
+			sendMessage(clusterMember, msg)
+	log.push(dummy.__dict__)
 
 
 def write_to_file(msg):
