@@ -8,10 +8,17 @@
 1. commitIndex - Logs from index 0 to commitIndex - 1 are committed, i.e., they are present in majority of the nodes.
 2. 
 
-##### Function Definitions
+### Function Definitions
 1. replyAppendEntries(term, followerId, entriesToAppend, success)
 	entriesToAppend - If success is True, it is the number of entries appended by the followerId node else it is the rightmost entry which is known to be a mismatch.
 2.
+
+
+### Function Preconditions
+1. 
+
+
+
 
 ### Pointers
 1. For starting election timeout, use electionTimeCall = False, shift = True

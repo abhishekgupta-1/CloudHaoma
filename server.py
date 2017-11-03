@@ -84,6 +84,7 @@ for member in clusterMembers:
 
 def sendMessage(destid, msg):
 	msg['dest'] = destid
+#	if (msg['rpc'] == 'appendEntries' and msg['entries']!=[]): print "fuck fuck"
 	sender_socket.send_json(msg)
 
 
@@ -137,6 +138,25 @@ def heartbeatTimeout():
 electionTimeout()
 electionTimeCall = True
 heartbeatTimeout()
+
+
+def newNullEntry():
+	global server_id, currentTerm, clusterMembers, server_id, log
+	dummy = LogEntry(-1, 0, None, currentTerm)
+	msg = {'rpc':'appendEntries'
+		, 'term':currentTerm
+		, 'leaderId':server_id
+		, 'prevLogIndex':log._length-1
+		, 'prevLogTerm':log._entries[log._length-1]._term
+		, 'entries': [dummy.__dict__]
+		, 'leaderCommit':commitIndex}
+	print clusterMembers, server_id
+	for clusterMember in clusterMembers:
+		if clusterMember != server_id:
+			nextIndex[clusterMember] += 1
+			sendMessage(clusterMember, msg)
+	log.push(dummy.__dict__)
+
 
 #Bad!! TODO: make this async IO
 def processEntries(upTo):
@@ -200,6 +220,7 @@ def replyVote(term, voteGranted):
 			state = 'l'
 			lastKnownLeaderID = server_id
 			grantedVotes = 0
+			print "default nextIndex = %d and matchIndex = %d"%(log._length,log._length-1) 
 			for destid in clusterMembers:
 				if destid != server_id:
 					nextIndex[destid] = log._length
@@ -224,7 +245,6 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 			currentTerm = term
 		log_length = log._length
 		log_firstIndex = log._firstIndex
-		log_prevTerm = 10000000 #Possibly faulty!
 		if prevLogIndex < log_length:
 			log_prevTerm = log._entries[prevLogIndex]._term
 
@@ -299,7 +319,7 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 						print("Follower %d log should be now in sync. Exiting recovery mode."%(followerId))
 						recoveryMode = False
 				sendMessage(followerId, msg)
-				commitEntries()
+			commitEntries()
 		else:
 			if recoveryMode == False: print("Follower %d log is outdated. Entering recovery mode."%(followerId))
 			recoveryMode = True
@@ -319,21 +339,6 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 				pass
 
 
-def newNullEntry():
-	global server_id, currentTerm, clusterMembers, server_id, log
-	dummy = LogEntry(-1, 0, None, currentTerm)
-	msg = {'rpc':'appendEntries'
-		, 'term':currentTerm
-		, 'leaderId':server_id
-		, 'prevLogIndex':log._length-1
-		, 'prevLogTerm':log._entries[log._length-1]._term
-		, 'entries': [dummy.__dict__]
-		, 'leaderCommit':commitIndex}
-	for clusterMember in clusterMembers:
-		if clusterMember != server_id:
-			sendMessage(clusterMember, msg)
-	log.push(dummy.__dict__)
-
 
 def write_to_file(msg):
 	if msg is not None:
@@ -348,6 +353,7 @@ def commitEntries():
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
 	global newCommitIndex, currentTerm, log
 	processEn = False
+	print "matchIndex for 2 = ", 	matchIndex[2]
 	if maybeNeedToCommit:
 		newCommitIndex = commitIndex-1
 	while True:
@@ -358,6 +364,7 @@ def commitEntries():
 				if matchIndex[node] >= newCommitIndex: numReplicas+=1
 		if numReplicas <= len(clusterMembers)/2:
 			break
+	print "newCommitIndex = ", newCommitIndex
 	if log._entries[newCommitIndex-1]._term == currentTerm: #Possible faulty
 		commitIndex = newCommitIndex
 		processEn = True
@@ -374,7 +381,7 @@ def addEntry(requestId, request_data, clientId):
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId':server_id
-		, 'prevLogIndex': (log._length)
+		, 'prevLogIndex': (log._length)-1
 		, 'prevLogTerm' : log._entries[-1]._term
 		, 'entries': [entry.__dict__]
 		, 'leaderCommit':commitIndex};

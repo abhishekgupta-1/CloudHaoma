@@ -24,16 +24,16 @@ listen_socket.on('message', function(){
   accept_dict[message['requestId']] = message['status'];
 });
 
-// data = {'dest':1}
-// i = 5;
-// function send_mess(){
-//   console.log("here")
-//   sender_socket.send(JSON.stringify(data)); 
-//   if (i!=0)
-//     setTimeout(send_mess, 500);
-//   i--;
-// }
-// send_mess();
+data = {'dest':1}
+i = 5;
+function send_mess(){
+  console.log("here")
+  sender_socket.send(JSON.stringify(data)); 
+  if (i!=0)
+    setTimeout(send_mess, 500);
+  i--;
+}
+send_mess();
 
 var accept_dict = [];
 var counter = 0;
@@ -46,7 +46,7 @@ app.get('/pushData', function(req, res){
   msg = {'clientId':serverID
   , 'dest': 1
   , 'requestId' : request_id
-  , 'request_data' : JSON.stringify({'value':'123'+counter, 'fileName': 'abc' + counter })
+  , 'request_data' : {'data':'123'+counter, 'fileName': 'abc' + counter }
   , 'rpc':'addEntry'
   };
 
