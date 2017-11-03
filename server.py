@@ -69,13 +69,12 @@ recoveryPrevLogIndex = 0
 grantedVotes = 0
 election = random.randint(150, 300)
 heartbeatTime = 100
-commitTime = 50
+commitTime = 500
 log = Log(server_id)
 shift = False
 shiftHeart = False
 electionTimeCall = False
 heartbeatTimeCall = False
-#This function will called every electionTime
 
 
 for member in clusterMembers:
@@ -84,7 +83,6 @@ for member in clusterMembers:
 
 def sendMessage(destid, msg):
 	msg['dest'] = destid
-#	if (msg['rpc'] == 'appendEntries' and msg['entries']!=[]): print "fuck fuck"
 	sender_socket.send_json(msg)
 
 
@@ -153,8 +151,9 @@ def newNullEntry():
 	print clusterMembers, server_id
 	for clusterMember in clusterMembers:
 		if clusterMember != server_id:
-			nextIndex[clusterMember] += 1
-			sendMessage(clusterMember, msg)
+			if nextIndex[clusterMember] == log._length:
+				nextIndex[clusterMember] += 1
+				sendMessage(clusterMember, msg)
 	log.push(dummy.__dict__)
 
 
@@ -170,8 +169,8 @@ def processEntries(upTo):
 			, 'requestId':requestId
 			, 'status' : 'Success'};
 			sendMessage(clientId, msg);
-		print entry.__dict__, type(entry)
-		print entry._data, type(entry._data)
+		# print entry.__dict__, type(entry)
+		# print entry._data, type(entry._data)
 		write_to_file(entry._data)
 	lastApplied = upTo
 
@@ -220,7 +219,7 @@ def replyVote(term, voteGranted):
 			state = 'l'
 			lastKnownLeaderID = server_id
 			grantedVotes = 0
-			print "default nextIndex = %d and matchIndex = %d"%(log._length,log._length-1) 
+			# print "default nextIndex = %d and matchIndex = %d"%(log._length,log._length-1) 
 			for destid in clusterMembers:
 				if destid != server_id:
 					nextIndex[destid] = log._length
@@ -269,6 +268,7 @@ def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderComm
 				log.pop()
 			if recoveryMode == False:
 				print("Log is outdated. Entering recovering mode.")
+			recoveryMode = True
 			recoveryPrevLogIndex = prevLogIndex
 			msg = {'rpc':'replyAppendEntries'
 			, 'term':currentTerm
@@ -298,14 +298,12 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 			grantedVotes = 0
 			votedFor= None
 			heartbeatTimeCall = False
-			#Starting electionTimeout(Case leader got disconnected, rest of nodes moves on, without starting electionTimeout this node will become passive) 
-			#Possibly faulty
 			electionTimeCall = False	
 			shift = True
 		elif success:
 			matchIndex[followerId] += entriesToAppend
 			maybeNeedToCommit = True
-			if (nextIndex[followerId]<log._length):
+			if nextIndex[followerId] < log._length:
 				msg = {'rpc':'appendEntries'
 				, 'term':currentTerm
 				, 'leaderId':server_id
@@ -319,7 +317,6 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 						print("Follower %d log should be now in sync. Exiting recovery mode."%(followerId))
 						recoveryMode = False
 				sendMessage(followerId, msg)
-			commitEntries()
 		else:
 			if recoveryMode == False: print("Follower %d log is outdated. Entering recovery mode."%(followerId))
 			recoveryMode = True
@@ -350,28 +347,32 @@ def write_to_file(msg):
 
 #commitIndex - Start commit from this index
 def commitEntries():
+	# print "iam here iam here iam hereee"
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
-	global newCommitIndex, currentTerm, log
-	processEn = False
-	print "matchIndex for 2 = ", 	matchIndex[2]
-	if maybeNeedToCommit:
-		newCommitIndex = commitIndex-1
-	while True:
-		newCommitIndex += 1
-		numReplicas = 1
-		for node in clusterMembers:
-			if node != server_id:
-				if matchIndex[node] >= newCommitIndex: numReplicas+=1
-		if numReplicas <= len(clusterMembers)/2:
-			break
-	print "newCommitIndex = ", newCommitIndex
-	if log._entries[newCommitIndex-1]._term == currentTerm: #Possible faulty
-		commitIndex = newCommitIndex
-		processEn = True
-	maybeNeedToCommit = False
-	if processEn:
-		processEntries(commitIndex) #Why commitIndex + 1?? #Possible fault
+	global newCommitIndex, currentTerm, log, commitTime
+	if maybeNeedToCommit == True:
+		processEn = False
+		#print "matchIndex for 2 = ", 	matchIndex[2]
+		if maybeNeedToCommit:
+			newCommitIndex = commitIndex-1
+		while True:
+			newCommitIndex += 1
+			numReplicas = 1
+			for node in clusterMembers:
+				if node != server_id:
+					if matchIndex[node] >= newCommitIndex: numReplicas+=1
+			if numReplicas <= len(clusterMembers)/2:
+				break
+		print "newCommitIndex = ", newCommitIndex
+		if log._entries[newCommitIndex-1]._term == currentTerm: #Possible faulty
+			commitIndex = newCommitIndex
+			processEn = True
+		maybeNeedToCommit = False
+		if processEn:
+			processEntries(commitIndex) #Why commitIndex + 1?? #Possible fault
+	threading.Timer(commitTime/1000.0, commitEntries).start()
 
+commitEntries()
 
 def addEntry(requestId, request_data, clientId):
 	global currentTerm, state, server_id, log, heartbeatTimeCall, lastKnownLeaderID
@@ -435,13 +436,3 @@ while True:
 			, message['request_data']
 			, message['clientId'])
 
-
-
-		
-
-  # msg = {'clientId':serverID
-  # , 'dest': ''
-  # , 'requestId' : request_id
-  # , 'request_data' : '123'
-  # , 'rpc':'addEntry'
-  # , 'fileInfo' : 'bee.txt'};

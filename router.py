@@ -17,13 +17,13 @@ client_socket.bind("tcp://*:5002")
 
 Servers = ast.literal_eval(sys.argv[2])
 Servers = [str(x) for x in Servers]
-print Servers, type(Servers), type(Servers[0])
+# print Servers, type(Servers), type(Servers[0])
 while True:
 	data = receiver_socket.recv_json()
 	dest_id = str(data['dest'])
-	print data
+	if debug:
+		print data
 	if dest_id not in Servers:
 		sender_socket.send("%s %s"%(dest_id, data))
 	else:
-		print "herehereher"
 		client_socket.send("%s"%(json.dumps(data)))
