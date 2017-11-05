@@ -93,7 +93,7 @@ def electionTimeout():
 		if lastKnownLeaderID == None:
 			print("No known leader for me, starting election!")
 		else:
-			print("No heartbeat received from leader starting election!")
+			print("No heartbeat received from leader, starting new election!")
 		currentTerm += 1
 		state = 'c'
 		votedFor = server_id
@@ -133,9 +133,7 @@ def heartbeatTimeout():
 		shiftHeart = False
 	threading.Timer(heartbeatTime/1000.0, heartbeatTimeout).start()
 
-electionTimeout()
-electionTimeCall = True
-heartbeatTimeout()
+
 
 
 def newNullEntry():
@@ -183,7 +181,7 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 		if term > currentTerm : #I am in the past
 			print("Election in progress!")
 			currentTerm = term
-			if (state == 'l'): 
+			if (state == 'l'):
 				print("Demoting to follower state.")
 			state = 'f'
 			votedFor = None
@@ -199,7 +197,7 @@ def requestVote(term, candidateId, lastLogIndex, lastLogTerm):
 		else:
 			msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False};
 	else:  #Sender is In the Past
-		msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False}; 
+		msg = {'rpc':'replyVote', 'term':currentTerm, 'voteGranted':False};
 	sendMessage(candidateId, msg)
 
 
@@ -219,7 +217,7 @@ def replyVote(term, voteGranted):
 			state = 'l'
 			lastKnownLeaderID = server_id
 			grantedVotes = 0
-			# print "default nextIndex = %d and matchIndex = %d"%(log._length,log._length-1) 
+			# print "default nextIndex = %d and matchIndex = %d"%(log._length,log._length-1)
 			for destid in clusterMembers:
 				if destid != server_id:
 					nextIndex[destid] = log._length
@@ -298,7 +296,7 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 			grantedVotes = 0
 			votedFor= None
 			heartbeatTimeCall = False
-			electionTimeCall = False	
+			electionTimeCall = False
 			shift = True
 		elif success:
 			matchIndex[followerId] += entriesToAppend
@@ -372,7 +370,6 @@ def commitEntries():
 			processEntries(commitIndex) #Why commitIndex + 1?? #Possible fault
 	threading.Timer(commitTime/1000.0, commitEntries).start()
 
-commitEntries()
 
 def addEntry(requestId, request_data, clientId):
 	global currentTerm, state, server_id, log, heartbeatTimeCall, lastKnownLeaderID
@@ -382,7 +379,7 @@ def addEntry(requestId, request_data, clientId):
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId':server_id
-		, 'prevLogIndex': (log._length)-1	
+		, 'prevLogIndex': (log._length)-1
 		, 'prevLogTerm' : log._entries[-1]._term
 		, 'entries': [entry.__dict__]
 		, 'leaderCommit':commitIndex};
@@ -401,10 +398,18 @@ def addEntry(requestId, request_data, clientId):
 		, 'requestId' : requestId
 		, 'request_data' : request_data
 		, 'rpc':'addEntry'};
-		sendMessage(lastKnownLeaderID, msg);
+		sendMessage(lastKnownLeaderID, msg)
 
+def readFile(requestId, clientId, filename):
+	with open(filename, "rU") as myfile:
+		for line in f:
+			print line
 
-
+# def main():
+electionTimeout()
+electionTimeCall = True
+heartbeatTimeout()
+commitEntries()
 #Life
 while True:
 	message = receiver_socket.recv()
@@ -435,4 +440,10 @@ while True:
 		addEntry(message['requestId']
 			, message['request_data']
 			, message['clientId'])
+	elif rpc == 'readEntry':
+		readFile(message['requestId']
+			, message['clientId']
+			, message['filename'])
 
+# if __name__=="__main__":
+# 	main()
