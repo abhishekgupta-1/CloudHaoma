@@ -3,13 +3,13 @@ import zmq
 import json
 import ast
 
-#python2.7 router.py 12345 [[1,2,3],[4,5]] [6] false
+#python2.7 router.py 12345 [[1,2,3],[4,5]] '[6]' false
 #			0			1		2			3	4	
 
 
 #Sharding Function
 def getGroup(customerID, numGroups):
-	return customerID % numGroups;
+	return hash(customerID) % numGroups;
 
 context = zmq.Context()
 #All clusterNodes will send their packets to this socket
@@ -46,12 +46,13 @@ while True:
 	dest_id = str(data.get('dest'))
 	# if debug:
 	# 	print data
+	#print dest_id
 	if dest_id == 'None': 
 		#Packet received from a webserver
 		#We don't know the destination
 		#Find group from customerId
 		#Assign in a round robin fashion in the group
-		customerId = int(data['customerId'])
+		customerId = data['customerId']
 		groupId = getGroup(customerId, numGroups)
 		dest_id = str(groups[groupId][servingIndices[groupId]])
 		print "Serving to group %d and destination %s"%(groupId, dest_id)
