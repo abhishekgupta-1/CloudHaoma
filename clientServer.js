@@ -44,7 +44,6 @@ app.get('/pushData', function(req, res){
 	accept_dict[request_id] = 'failure';
   counter += 1
   msg = {'clientId':serverID
-  , 'dest': None
   , 'requestId' : request_id
   , 'timestamp' : new Date().getTime()
   , 'request_data' : {'data': req['data'], 'fileName': req['filename'] + counter }
@@ -62,6 +61,7 @@ app.get('/pushData', function(req, res){
     clearInterval(my_int)
     return
    }
+   count -= 1
    if (accept_dict[request_id] == "Success"){
     	console.log("Log accepted");
       res.send("Log added!");
