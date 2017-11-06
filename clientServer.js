@@ -90,7 +90,7 @@ app.post('/pushData', function(req, res){
   msg = {'clientId':serverID
   , 'dest': 1
   , 'requestId' : requestId
-  , 'requestData' : {'fileData': str(new Date().getTime()) + data['data'] + "\n", 'fileName': data['fileName'] }
+  , 'requestData' : {'fileData': new Date().getTime() + data['data'] + "\n", 'fileName': data['fileName'] }
   , 'rpc':'addEntry'
   };
   sender_socket.send(JSON.stringify(msg));
