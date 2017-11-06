@@ -405,6 +405,21 @@ def readFile(requestId, clientId, filename):
 		for line in f:
 			print line
 
+def writeToPersistentStore():
+	global currentTerm, votedFor, log
+	dic = {"currentTerm": currentTerm, "votedFor": votedFor}
+	with open("checkpoint.pkl", "wU") as outFile:
+		pickle.dump(dic, outFile, pickle.HIGHEST_PROTOCOL)
+		pickle.dump(log, outFile, pickle.HIGHEST_PROTOCOL)
+
+def readFromPersistentStore():
+	global currentTerm, votedFor, log
+	with open("checkpoint.pkl", "rU") as inFile:
+		newDic = pickle.load(inFile)
+		currentTerm = newDic['currentTerm']
+		votedFor = newDic['votedFor']
+		log = pickle.load(inFile)
+
 # def main():
 electionTimeout()
 electionTimeCall = True
