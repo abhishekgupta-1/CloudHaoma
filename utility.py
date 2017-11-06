@@ -1,3 +1,5 @@
+import random
+
 # global variables
 currentTerm = 0
 state = 'f'
@@ -14,7 +16,6 @@ grantedVotes = 0
 election = random.randint(150, 300)
 heartbeatTime = 100
 commitTime = 500
-log = Log(server_id)
 shift = False
 shiftHeart = False
 electionTimeCall = False

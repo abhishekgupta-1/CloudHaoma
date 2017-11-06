@@ -16,7 +16,7 @@ sender_socket = zmq.socket('push')
 sender_socket.connect(router_address+":"+send_port_no)
 
 listen_socket.on('message', function(){
-  console.log("here\n")
+  // console.log("here\n")
   var args = Array.apply(null, arguments);
   console.log(args[0].toString('utf8'));
   var message = JSON.parse(args[0].toString('utf8'))
@@ -44,8 +44,9 @@ app.get('/pushData', function(req, res){
 	accept_dict[request_id] = 'failure';
   counter += 1
   msg = {'clientId':serverID
-  , 'dest': 1
+  , 'dest': None
   , 'requestId' : request_id
+  , 'timestamp' : new Date().getTime()
   , 'request_data' : {'data': req['data'], 'fileName': req['filename'] + counter }
   , 'rpc':'addEntry'
   };
