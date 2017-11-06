@@ -45,7 +45,10 @@ listen_socket.on('message', function(){
 });
 
 
-//For reading request, for now API contains fileName
+//For reading request
+//Request Infromation:
+//Post Request - multipart/formdata
+//Keys - clientId, sourceId
 app.post('/readData', function(req, res){
   var requestId = Math.random().toString(36).substring(7); //Assigning a randomID
   if (debug) console.log("Read RequestID assigned : " + requestId)
@@ -58,6 +61,8 @@ app.post('/readData', function(req, res){
   , 'requestId': requestId
   , 'rpc' : 'readEntry'
   , 'fileName' : fileName
+  , 'customerId' : data['clientId']
+  , 'sourceId' : data['sourceId']
   };
   sender_socket.send(JSON.stringify(msg));
   if (debug) console.log(msg);
@@ -81,6 +86,9 @@ app.post('/readData', function(req, res){
 
 
 //For writing request
+//Requests Information:-
+//POST REQUEST - multipart/formdata
+//Keys - fileData, clientId, sourceId
 app.post('/pushData', function(req, res){
 	var requestId = Math.random().toString(36).substring(7); //Assigning a randomID
 	if (debug) console.log("Write RequestID assigned : " + requestId)
@@ -91,13 +99,15 @@ app.post('/pushData', function(req, res){
   , 'requestId' : requestId
   , 'requestData' : {'fileData': new Date().getTime() + ":" + data['fileData'] + "\n", 'clientId': data['clientId'], 'sourceId':data['sourceId'] }
   , 'rpc':'addEntry'
+  , 'customerId' : data['clientId']
+  , 'sourceId' : data['sourceId']
   };
   sender_socket.send(JSON.stringify(msg));
   if (debug) console.log(msg)
   var count = 20;
   var my_int =   setInterval(function(){
     if (count == 0) {
-    	res.send("Not added!");
+    	res.send("Server Timeout!");
     	clearInterval(my_int);
   	  return;
     }
@@ -118,15 +128,3 @@ http.listen(3000, function(){
 });
 
 
-// data = {'dest':1}
-// i = 5;
-// function send_mess(){
-//   console.log("here")
-//   sender_socket.send(JSON.stringify(data));
-//   if (i!=0)
-//     setTimeout(send_mess, 500);
-//   i--;
-// }
-// send_mess();
-
-  // while (time_out && writePending_dict[request_id]<majority) time_out--;
