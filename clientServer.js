@@ -52,7 +52,7 @@ app.post('/readData', function(req, res){
   readPending_dict[requestId] = 'failure';
   var data = req.fields;
   if (debug) console.log(data);
-  var fileName = data['fileName'];
+  var fileName = data['clientId']+"/"+data['sourceId'];
   msg = {'clientId' : serverID
   , 'dest' : 1
   , 'requestId': requestId
