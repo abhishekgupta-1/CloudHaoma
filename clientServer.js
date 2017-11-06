@@ -52,7 +52,7 @@ app.post('/readData', function(req, res){
   readPending_dict[requestId] = 'failure';
   var data = req.fields;
   if (debug) console.log(data);
-  var fileName = data['fileName'];
+  var fileName = data['clientId']+"/"+data['sourceId'];
   msg = {'clientId' : serverID
   , 'dest' : 1
   , 'requestId': requestId
@@ -88,9 +88,8 @@ app.post('/pushData', function(req, res){
   data = req.fields;
   if (debug) console.log(data)
   msg = {'clientId':serverID
-  , 'dest': 1
   , 'requestId' : requestId
-  , 'requestData' : {'fileData': new Date().getTime() + data['data'] + "\n", 'fileName': data['fileName'] }
+  , 'requestData' : {'fileData': new Date().getTime() + ":" + data['fileData'] + "\n", 'clientId': data['clientId'], 'sourceId':data['sourceId'] }
   , 'rpc':'addEntry'
   };
   sender_socket.send(JSON.stringify(msg));

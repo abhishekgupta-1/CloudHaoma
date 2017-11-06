@@ -14,8 +14,12 @@ def readFromPersistentStore():
 		votedFor = newDic['votedFor']
 		log = newDic['log']
 
-
+import os
 def write_to_file(msg):
 	if msg is not None:
-		with open(msg['fileName'], "a") as myfile:
-		    myfile.write("%s"%(msg['fileData']))
+		clientId = msg['clientId']
+		if os.path.isdir(clientId) == False:
+			os.makedirs(clientId)
+		path = clientId+"/"+msg['sourceId']
+		with open(path, "a") as myfile:
+			myfile.write("%s"%(msg['fileData']))
