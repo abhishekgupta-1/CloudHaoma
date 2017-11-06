@@ -4,42 +4,12 @@ import random
 import ast
 import threading
 import json
-
+import pickle
+from log import LogEntry, Log
+from utility import *
+from timeout import electionTimeout, heartbeatTimeout
 #python2.7 server.py 1 tcp://127.0.0.1 12345 ["1","2","3"]
-
-class LogEntry(object):
-	def __init__(self, clientId, requestId, data, term):
-		self._clientId = clientId
-		self._requestId = requestId
-		self._data = data
-		self._term = term
-
-class Log(object):
-	def __init__(self, server_id):
-		self._firstIndex = 0
-		self._length = 1;
-		self._entries = [LogEntry(-1, 0, None, 0), ]
-
-	def push(self, value):
-		self._length += 1
-		print value, type(value)
-		trans = LogEntry(value['_clientId'], value['_requestId'], value['_data'], value['_term'])
-		self._entries.append(trans)
-
-	def pop(self):
-		self._length -= 1
-		self._entries.pop()
-
-	def shift(self):
-		pass
-
-	def slice(self, from1, to):
-		return self._entries[from1:to]
-
-
-
 context = zmq.Context()
-
 
 server_id = int(sys.argv[1])
 router_address = sys.argv[2]
@@ -55,28 +25,6 @@ receiver_socket.setsockopt(zmq.SUBSCRIBE, str(server_id))
 receiver_socket.connect(router_address + ":" +port_no2)
 
 
-currentTerm = 0
-state = 'f'
-votedFor = None
-lastKnownLeaderID = None
-commitIndex = 0
-maybeNeedToCommit = False
-lastApplied = 0
-nextIndex = {}
-matchIndex = {}
-recoveryMode = False
-recoveryPrevLogIndex = 0
-grantedVotes = 0
-election = random.randint(150, 300)
-heartbeatTime = 100
-commitTime = 500
-log = Log(server_id)
-shift = False
-shiftHeart = False
-electionTimeCall = False
-heartbeatTimeCall = False
-
-
 for member in clusterMembers:
 	matchIndex[member] = 0
 	nextIndex[member] = 1
@@ -84,56 +32,6 @@ for member in clusterMembers:
 def sendMessage(destid, msg):
 	msg['dest'] = destid
 	sender_socket.send_json(msg)
-
-
-def electionTimeout():
-	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
-	global server_id, shift, election
-	if electionTimeCall == True:
-		if lastKnownLeaderID == None:
-			print("No known leader for me, starting election!")
-		else:
-			print("No heartbeat received from leader, starting new election!")
-		currentTerm += 1
-		state = 'c'
-		votedFor = server_id
-		grantedVotes = 1
-		msg = {'rpc':'requestVote'
-		, 'term':currentTerm
-		, 'candidateId':server_id
-		, 'lastLogIndex':log._length-1
-		, 'lastLogTerm':log._entries[-1]._term};
-		for destid in clusterMembers:
-			if destid != server_id:
-				sendMessage(destid, msg)
-	if shift:
-		electionTimeCall = True
-		shift = False
-	threading.Timer(election/1000.0, electionTimeout).start()
-
-
-def heartbeatTimeout():
-	global heartbeatTimeCall, shift, currentTerm, server_id, shiftHeart, heartbeatTime
-	global electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
-	if heartbeatTimeCall == True:
-		msg = {'rpc':'appendEntries'
-		, 'term':currentTerm
-		, 'leaderId': server_id
-		, 'prevLogIndex':log._length-1
-		, 'prevLogTerm':log._entries[-1]._term
-		, 'entries' : []
-		, 'leaderCommit':commitIndex};
-		for destid in clusterMembers:
-			if destid != server_id:
-				sendMessage(destid, msg)
-		electionTimeCall = False
-		shift = False
-	if shiftHeart == True:
-		heartbeatTimeCall = True
-		shiftHeart = False
-	threading.Timer(heartbeatTime/1000.0, heartbeatTimeout).start()
-
-
 
 
 def newNullEntry():
@@ -333,19 +231,8 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 			else: #Last log is behind oldest entry still in the log
 				pass
 
-
-
-def write_to_file(msg):
-	if msg is not None:
-		with open(msg['fileName'], "a") as myfile:
-		    myfile.write("%s"%(msg['data']))
-
-
-
-
 #commitIndex - Start commit from this index
 def commitEntries():
-	# print "iam here iam here iam hereee"
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
 	global newCommitIndex, currentTerm, log, commitTime
 	if maybeNeedToCommit == True:
@@ -399,26 +286,6 @@ def addEntry(requestId, request_data, clientId):
 		, 'request_data' : request_data
 		, 'rpc':'addEntry'};
 		sendMessage(lastKnownLeaderID, msg)
-
-def readFile(requestId, clientId, filename):
-	with open(filename, "rU") as myfile:
-		for line in f:
-			print line
-
-def writeToPersistentStore():
-	global currentTerm, votedFor, log
-	dic = {"currentTerm": currentTerm, "votedFor": votedFor}
-	with open("checkpoint.pkl", "wU") as outFile:
-		pickle.dump(dic, outFile, pickle.HIGHEST_PROTOCOL)
-		pickle.dump(log, outFile, pickle.HIGHEST_PROTOCOL)
-
-def readFromPersistentStore():
-	global currentTerm, votedFor, log
-	with open("checkpoint.pkl", "rU") as inFile:
-		newDic = pickle.load(inFile)
-		currentTerm = newDic['currentTerm']
-		votedFor = newDic['votedFor']
-		log = pickle.load(inFile)
 
 # def main():
 electionTimeout()

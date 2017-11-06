@@ -1,4 +1,4 @@
-import pickle
+
 class LogEntry(object):
 	def __init__(self, clientId, requestId, data, term):
 		self._clientId = clientId
@@ -11,7 +11,6 @@ class LogEntry(object):
 		"\nrequestId: " + str(self._requestId) + \
 		"\ndata: " + str(self._data) + \
 		"\nterm: " + str(self._term) + "\n "
-
 
 class Log(object):
 	def __init__(self, server_id):
@@ -39,32 +38,3 @@ class Log(object):
 
 	def slice(self, from1, to):
 		return self._entries[from1:to]
-
-# currentTerm = 23
-# votedFor = 1
-# log = Log(1)
-def writeToPersistentStore():
-	global currentTerm, votedFor, log
-	dic = {"currentTerm": currentTerm, "votedFor": votedFor, "log": log }
-	with open("checkpoint.pkl", "wb") as outFile:
-		pickle.dump(dic, outFile, pickle.HIGHEST_PROTOCOL)
-		# pickle.dump(log, outFile, pickle.HIGHEST_PROTOCOL)
-
-def readFromPersistentStore():
-	global currentTerm, votedFor, log
-	with open("checkpoint.pkl", "rb") as inFile:
-		newDic = pickle.load(inFile)
-		currentTerm = newDic['currentTerm']
-		votedFor = newDic['votedFor']
-		log = newDic['log']
-		# log = pickle.load(inFile)
-
-def main():
-	# writeToPersistentStore()
-	readFromPersistentStore()
-	print "\ncurrentTerm: " + str(currentTerm)
-	print "\nvotedFor: "+ str(votedFor)
-	print "\nlog: " + str(log)
-
-if __name__=="__main__":
-	main()
