@@ -23,6 +23,7 @@ recoveryPrevLogIndex = 0
 grantedVotes = 0
 election = random.randint(150, 300)
 heartbeatTime = 100
+persistentStoreTime = 2000
 commitTime = 500
 shift = False
 shiftHeart = False
@@ -100,6 +101,12 @@ def heartbeatTimeout():
 		heartbeatTimeCall = True
 		shiftHeart = False
 	threading.Timer(heartbeatTime/1000.0, heartbeatTimeout).start()
+
+def persistentStoreTimeout():
+	global currentTerm, votedFor, log, lastApplied
+	# print("here\n")
+	writeToPersistentStore(currentTerm, votedFor, log, lastApplied)
+	threading.Timer(persistentStoreTime/1000.0, persistentStoreTimeout).start()
 
 def newNullEntry():
 	global server_id, currentTerm, clusterMembers, server_id, log
@@ -358,18 +365,27 @@ def addEntry(requestId, requestData, clientId):
 
 def readEntry(requestId, clientId, fileName):
 	data = ""
-	with open(fileName, "rb") as myfile:
-		data = myfile.read()
+	if os.path.exists(fileName) ==False:
+		data = "Does not exist!"
+	else:
+		with open(fileName, "rb") as myfile:
+			data = myfile.read()
 	msg = {'rpc' : 'readEntryReply'
 	, 'data' : data
 	, 'requestId' : requestId};
 	sendMessage(clientId, msg)
 
 # def main():
+temp = readFromPersistentStore()
+if temp != None:
+	currentTerm, votedFor, log, lastApplied = temp
+# print temp
 electionTimeout()
 electionTimeCall = True
 heartbeatTimeout()
+persistentStoreTimeout()
 commitEntries()
+
 #Life
 while True:
 	message = receiver_socket.recv()
