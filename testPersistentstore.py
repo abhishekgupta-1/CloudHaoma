@@ -6,11 +6,11 @@ class LogEntry(object):
 		self._data = data
 		self._term = term
 
-	def __str__(self):
-		return "clientId "+ str(self._clientId) + \
-		"requestId " + str(self._requestId) + \
-		"data" + str(self._data) + \
-		"term " + str(self._term) + "\n "
+	def __repr__(self):
+		return "\nclientId: "+ str(self._clientId) + \
+		"\nrequestId: " + str(self._requestId) + \
+		"\ndata: " + str(self._data) + \
+		"\nterm: " + str(self._term) + "\n "
 
 
 class Log(object):
@@ -19,10 +19,10 @@ class Log(object):
 		self._length = 1;
 		self._entries = [LogEntry(-1, 0, None, 0), ]
 
-	def __str__(self):
-		return "firstIndex " + str(self._firstIndex) + \
-				"length " + str(self._length) + \
-				"Entries" + str(self._entries.__str__())
+	def __repr__(self):
+		return "\nfirstIndex " + str(self._firstIndex) + \
+				"\nlength " + str(self._length) + \
+				"\nEntries" + str(self._entries)
 
 	def push(self, value):
 		self._length += 1
@@ -61,8 +61,9 @@ def readFromPersistentStore():
 def main():
 	writeToPersistentStore()
 	readFromPersistentStore()
-	print "\ncurrentTerm :" + str(currentTerm)
-	print votedFor, log
+	print "\ncurrentTerm: " + str(currentTerm)
+	print "\nvotedFor: "+ str(votedFor)
+	print "\nlog: " + str(log)
 
 if __name__=="__main__":
 	main()
