@@ -27,7 +27,9 @@ readPending_dict = [];
 
 
 listen_socket.on('message', function(){
+
   // Parsing Message
+
   var args = Array.apply(null, arguments);
   console.log(args[0].toString('utf8'));
   var message = JSON.parse(args[0].toString('utf8'))
@@ -88,7 +90,7 @@ app.post('/pushData', function(req, res){
   msg = {'clientId':serverID
   , 'dest': 1
   , 'requestId' : requestId
-  , 'requestData' : {'fileData': data['data'], 'fileName': data['fileName'] }
+  , 'requestData' : {'fileData': str(new Date().getTime()) + data['data'] + "\n", 'fileName': data['fileName'] }
   , 'rpc':'addEntry'
   };
   sender_socket.send(JSON.stringify(msg));

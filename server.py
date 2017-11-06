@@ -1,60 +1,14 @@
 import zmq
 import sys
-import random
 import ast
 import threading
 import json
+import pickle
+from log import LogEntry,Log
+from utility import *
+import random
 
-#python2.7 server.py 1 tcp://127.0.0.1 12345 ["1","2","3"]
-
-class LogEntry(object):
-	def __init__(self, clientId, requestId, data, term):
-		self._clientId = clientId
-		self._requestId = requestId
-		self._data = data
-		self._term = term
-
-class Log(object):
-	def __init__(self, server_id):
-		self._firstIndex = 0
-		self._length = 1;
-		self._entries = [LogEntry(-1, 0, None, 0), ]
-
-	def push(self, value):
-		self._length += 1
-		print value, type(value)
-		trans = LogEntry(value['_clientId'], value['_requestId'], value['_data'], value['_term'])
-		self._entries.append(trans)
-
-	def pop(self):
-		self._length -= 1
-		self._entries.pop()
-
-	def shift(self):
-		pass
-
-	def slice(self, from1, to):
-		return self._entries[from1:to]
-
-
-
-context = zmq.Context()
-
-
-server_id = int(sys.argv[1])
-router_address = sys.argv[2]
-port_no = sys.argv[3]
-port_no2 = '5000'
-clusterMembers = ast.literal_eval(sys.argv[4])
-clusterMembers = [int(x) for x in clusterMembers]
-sender_socket = context.socket(zmq.PUSH)
-sender_socket.connect(router_address +":"+ port_no)
-
-receiver_socket = context.socket(zmq.SUB)
-receiver_socket.setsockopt(zmq.SUBSCRIBE, str(server_id))
-receiver_socket.connect(router_address + ":" +port_no2)
-
-
+# global variables
 currentTerm = 0
 state = 'f'
 votedFor = None
@@ -70,12 +24,27 @@ grantedVotes = 0
 election = random.randint(150, 300)
 heartbeatTime = 100
 commitTime = 500
-log = Log(server_id)
 shift = False
 shiftHeart = False
 electionTimeCall = False
 heartbeatTimeCall = False
+#python2.7 server.py 1 tcp://127.0.0.1 12345 ["1","2","3"]
+context = zmq.Context()
 
+server_id = int(sys.argv[1])
+router_address = sys.argv[2]
+port_no = sys.argv[3]
+port_no2 = '5000'
+clusterMembers = ast.literal_eval(sys.argv[4])
+clusterMembers = [int(x) for x in clusterMembers]
+sender_socket = context.socket(zmq.PUSH)
+sender_socket.connect(router_address +":"+ port_no)
+
+receiver_socket = context.socket(zmq.SUB)
+receiver_socket.setsockopt(zmq.SUBSCRIBE, str(server_id))
+receiver_socket.connect(router_address + ":" +port_no2)
+
+log = Log(server_id)
 
 for member in clusterMembers:
 	matchIndex[member] = 0
@@ -84,7 +53,6 @@ for member in clusterMembers:
 def sendMessage(destid, msg):
 	msg['dest'] = destid
 	sender_socket.send_json(msg)
-
 
 def electionTimeout():
 	global currentTerm, electionTimeCall, state, votedFor, grantedVotes, clusterMember, lastKnownLeaderID, log
@@ -132,9 +100,6 @@ def heartbeatTimeout():
 		heartbeatTimeCall = True
 		shiftHeart = False
 	threading.Timer(heartbeatTime/1000.0, heartbeatTimeout).start()
-
-
-
 
 def newNullEntry():
 	global server_id, currentTerm, clusterMembers, server_id, log
@@ -335,18 +300,14 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 				pass
 
 
-
 def write_to_file(msg):
 	if msg is not None:
 		with open(msg['fileName'], "a") as myfile:
 		    myfile.write("%s"%(msg['fileData']))
 
 
-
-
 #commitIndex - Start commit from this index
 def commitEntries():
-	# print "iam here iam here iam hereee"
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
 	global newCommitIndex, currentTerm, log, commitTime
 	if maybeNeedToCommit == True:
@@ -409,21 +370,6 @@ def readEntry(requestId, clientId, fileName):
 	, 'data' : data
 	, 'requestId' : requestId};
 	sendMessage(clientId, msg)
-
-def writeToPersistentStore():
-	global currentTerm, votedFor, log
-	dic = {"currentTerm": currentTerm, "votedFor": votedFor}
-	with open("checkpoint.pkl", "wU") as outFile:
-		pickle.dump(dic, outFile, pickle.HIGHEST_PROTOCOL)
-		pickle.dump(log, outFile, pickle.HIGHEST_PROTOCOL)
-
-def readFromPersistentStore():
-	global currentTerm, votedFor, log
-	with open("checkpoint.pkl", "rU") as inFile:
-		newDic = pickle.load(inFile)
-		currentTerm = newDic['currentTerm']
-		votedFor = newDic['votedFor']
-		log = pickle.load(inFile)
 
 # def main():
 electionTimeout()
