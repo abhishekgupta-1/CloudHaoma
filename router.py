@@ -25,12 +25,13 @@ debug = (sys.argv[4] == "true")
 # print Servers, type(Servers), type(Servers[0])
 while True:
 	data = receiver_socket.recv_json()
-	dest_id = str(data['dest'])
+	dest_id = str(data.get('dest'))
+	print "dest_id", dest_id
 	if dest_id == 'None':
-			dest_id = str(clusterServers[clusterServerId])
-			clusterServerId = clusterServerId % len(clusterServers)
-	if debug:
-		print data
+		dest_id = str(clusterServers[clusterServerId])
+		clusterServerId = (clusterServerId + 1) % len(clusterServers)
+		if debug:
+			print data
 	if dest_id not in webServers:
 		sender_socket.send("%s %s"%(dest_id, data))
 	else:

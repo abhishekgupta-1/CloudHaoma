@@ -88,7 +88,6 @@ app.post('/pushData', function(req, res){
   data = req.fields;
   if (debug) console.log(data)
   msg = {'clientId':serverID
-  , 'dest': 1
   , 'requestId' : requestId
   , 'requestData' : {'fileData': new Date().getTime() + ":" + data['fileData'] + "\n", 'clientId': data['clientId'], 'sourceId':data['sourceId'] }
   , 'rpc':'addEntry'
