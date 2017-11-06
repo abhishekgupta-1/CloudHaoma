@@ -1,18 +1,18 @@
-
-def writeToPersistentStore():
-	global currentTerm, votedFor, log
+import pickle
+def writeToPersistentStore(currentTerm, votedFor, log):
 	dic = {"currentTerm": currentTerm, "votedFor": votedFor, "log": log }
 	with open("checkpoint.pkl", "wb") as outFile:
 		pickle.dump(dic, outFile, pickle.HIGHEST_PROTOCOL)
 		# pickle.dump(log, outFile, pickle.HIGHEST_PROTOCOL)
 
 def readFromPersistentStore():
-	global currentTerm, votedFor, log
+	newDict = {}
 	with open("checkpoint.pkl", "rb") as inFile:
-		newDic = pickle.load(inFile)
-		currentTerm = newDic['currentTerm']
-		votedFor = newDic['votedFor']
-		log = newDic['log']
+		newDict = pickle.load(inFile)
+		currentTerm = newDict['currentTerm']
+		votedFor = newDict['votedFor']
+		log = newDict['log']
+	return currentTerm, votedFor, log
 
 import os
 def write_to_file(msg):

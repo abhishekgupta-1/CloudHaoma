@@ -26,7 +26,7 @@ debug = (sys.argv[4] == "true")
 while True:
 	data = receiver_socket.recv_json()
 	dest_id = str(data.get('dest'))
-	print "dest_id", dest_id
+	# print "dest_id", dest_id
 	if dest_id == 'None':
 		dest_id = str(clusterServers[clusterServerId])
 		clusterServerId = (clusterServerId + 1) % len(clusterServers)
