@@ -130,7 +130,8 @@ def processEntries(upTo):
 			requestId = entry._requestId
 			msg = {'dest':clientId
 			, 'requestId':requestId
-			, 'status' : 'Success'};
+			, 'status' : 'Success'
+			, 'rpc' : 'addEntryReply'};
 			sendMessage(clientId, msg);
 		# print entry.__dict__, type(entry)
 		# print entry._data, type(entry._data)
@@ -194,7 +195,7 @@ def replyVote(term, voteGranted):
 
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
 	global currentTerm, electionTimeCall, lastKnownLeaderID, currentTerm, log, shift
-	global recoveryMode, commitIndex, server_id
+	global recoveryMode, commitIndex, server_id, recoveryPrevLogIndex
 	processEn= False
 	msg = {}
 	if term>=currentTerm:
@@ -298,6 +299,13 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 			else: #Last log is behind oldest entry still in the log
 				pass
 
+
+def write_to_file(msg):
+	if msg is not None:
+		with open(msg['fileName'], "a") as myfile:
+		    myfile.write("%s"%(msg['fileData']))
+
+
 #commitIndex - Start commit from this index
 def commitEntries():
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
@@ -325,11 +333,11 @@ def commitEntries():
 	threading.Timer(commitTime/1000.0, commitEntries).start()
 
 
-def addEntry(requestId, request_data, clientId):
+def addEntry(requestId, requestData, clientId):
 	global currentTerm, state, server_id, log, heartbeatTimeCall, lastKnownLeaderID
 	global heartbeatTimeCall, shiftHeart, shift, electionTimeCall
 	if state == 'l':
-		entry = LogEntry(clientId, requestId, request_data, currentTerm)
+		entry = LogEntry(clientId, requestId, requestData, currentTerm)
 		msg = {'rpc':'appendEntries'
 		, 'term':currentTerm
 		, 'leaderId':server_id
@@ -350,9 +358,18 @@ def addEntry(requestId, request_data, clientId):
 	elif lastKnownLeaderID != None: #forward to leader
 		msg = {'clientId':clientId
 		, 'requestId' : requestId
-		, 'request_data' : request_data
+		, 'requestData' : requestData
 		, 'rpc':'addEntry'};
 		sendMessage(lastKnownLeaderID, msg)
+
+def readEntry(requestId, clientId, fileName):
+	data = ""
+	with open(fileName, "rb") as myfile:
+		data = myfile.read()
+	msg = {'rpc' : 'readEntryReply'
+	, 'data' : data
+	, 'requestId' : requestId};
+	sendMessage(clientId, msg)
 
 # def main():
 electionTimeout()
@@ -387,12 +404,12 @@ while True:
 			, message['success'])
 	elif rpc == 'addEntry':
 		addEntry(message['requestId']
-			, message['request_data']
+			, message['requestData']
 			, message['clientId'])
 	elif rpc == 'readEntry':
-		readFile(message['requestId']
+		readEntry(message['requestId']
 			, message['clientId']
-			, message['filename'])
+			, message['fileName'])
 
 # if __name__=="__main__":
 # 	main()
