@@ -229,7 +229,7 @@ def replyVote(term, voteGranted):
 
 def appendEntries(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit):
 	global currentTerm, electionTimeCall, lastKnownLeaderID, currentTerm, log, shift
-	global recoveryMode, commitIndex, server_id
+	global recoveryMode, commitIndex, server_id, recoveryPrevLogIndex
 	processEn= False
 	msg = {}
 	if term>=currentTerm:
