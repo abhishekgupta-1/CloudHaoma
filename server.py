@@ -300,12 +300,6 @@ def replyAppendEntries(term, followerId, entriesToAppend, success):
 				pass
 
 
-def write_to_file(msg):
-	if msg is not None:
-		with open(msg['fileName'], "a") as myfile:
-		    myfile.write("%s"%(msg['fileData']))
-
-
 #commitIndex - Start commit from this index
 def commitEntries():
 	global maybeNeedToCommit, commitIndex, clusterMembers, server_id
