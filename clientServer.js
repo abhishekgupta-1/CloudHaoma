@@ -28,7 +28,7 @@ listen_socket.on('message', function(){
 // i = 5;
 // function send_mess(){
 //   console.log("here")
-//   sender_socket.send(JSON.stringify(data)); 
+//   sender_socket.send(JSON.stringify(data));
 //   if (i!=0)
 //     setTimeout(send_mess, 500);
 //   i--;
@@ -46,12 +46,12 @@ app.get('/pushData', function(req, res){
   msg = {'clientId':serverID
   , 'dest': 1
   , 'requestId' : request_id
-  , 'request_data' : {'data':'123'+counter, 'fileName': 'abc' + counter }
+  , 'request_data' : {'data': req['data'], 'fileName': req['filename'] + counter }
   , 'rpc':'addEntry'
   };
 
   sender_socket.send(JSON.stringify(msg));
-	console.log("here")
+	console.log(msg)
   //io.emit('DataPush', {'data' : '123', 'requestID' : request_id});
 	// var time_out = 1000000;
   var count = 20;
