@@ -139,6 +139,7 @@ def processEntries(upTo):
 			, 'requestId':requestId
 			, 'status' : 'Success'
 			, 'rpc' : 'addEntryReply'};
+			print "After processing : %s"%(msg)
 			sendMessage(clientId, msg);
 		# print entry.__dict__, type(entry)
 		# print entry._data, type(entry._data)

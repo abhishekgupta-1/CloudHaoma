@@ -4,7 +4,7 @@ import json
 import ast
 
 #python2.7 router.py 12345 [[1,2,3],[4,5]] '[6]' false
-#			0			1		2			3	4	
+#            0         1           2         3    4	
 
 
 #Sharding Function
@@ -60,4 +60,5 @@ while True:
 	if dest_id not in webServers:
 		sender_socket.send("%s %s"%(dest_id, data))
 	else:
+		print data
 		client_socket.send("%s"%(json.dumps(data)))
