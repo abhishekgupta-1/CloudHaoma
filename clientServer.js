@@ -1,5 +1,5 @@
-//node clientServer.js 5 tcp://127.0.0.1 12345 true
-
+//node clientServer.js 5 tcp://127.0.0.1 12345 true 3000
+//0       1            2          3        4     5    6
 
 var app = require('express')();
 var bodyParser = require('body-parser');
@@ -15,6 +15,7 @@ serverID = process.argv[2]
 router_address = process.argv[3]
 send_port_no = process.argv[4]
 debug = (process.argv[5] == "true")
+web_port = process.argv[6]
 
 listen_socket = zmq.socket('pull');
 listen_socket.connect(router_address+":5002")
@@ -34,7 +35,8 @@ listen_socket.on('message', function(){
   console.log(args[0].toString('utf8'));
   var message = JSON.parse(args[0].toString('utf8'))
   console.log(message);
-
+  if (message['dest'] != serverID)
+    return;
 
   if (message['rpc'] == 'addEntryReply')
   	writePending_dict[message['requestId']] = message['status'];
@@ -74,7 +76,7 @@ app.post('/readData', function(req, res){
       clearInterval(my_int);
       return;
     }
-    count -= 1;
+    // count -= 1;
     if (readPending_dict[requestId] != "failure"){
       if (debug) console.log(readPending_dict[requestId]);
       res.send(readPending_dict[requestId]);
@@ -111,7 +113,7 @@ app.post('/pushData', function(req, res){
     	clearInterval(my_int);
   	  return;
     }
-    count -= 1;
+    // count -= 1;
     if (writePending_dict[requestId] == "Success"){
   	  if (debug) console.log("Log accepted");
   	  res.send("Log added!");
@@ -123,7 +125,7 @@ app.post('/pushData', function(req, res){
 
 
 //Start http server
-http.listen(3000, function(){
+http.listen(web_port, function(){
   console.log('listening on *:3000');
 });
 
