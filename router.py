@@ -17,7 +17,7 @@ receiver_socket = context.socket(zmq.PULL)
 receiver_socket.bind("tcp://*:"+str(sys.argv[1]))
 
 #All clusterNodes will receive packets from this socket
-sender_socket = context.socket(zmq.PUSH)
+sender_socket = context.socket(zmq.PUB)
 sender_socket.bind("tcp://*:5000");
 
 #WebServer receives response from this socket
@@ -44,8 +44,8 @@ if debug:
 while True:
 	data = receiver_socket.recv_json()
 	dest_id = str(data.get('dest'))
-	# if debug:
-	# 	print data
+	if debug:
+		print data
 	#print dest_id
 	if dest_id == 'None': 
 		#Packet received from a webserver
