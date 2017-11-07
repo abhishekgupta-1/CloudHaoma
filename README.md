@@ -40,11 +40,12 @@ Run the following code on the node which you want to run your web server
 (Currently webserver tries to insert hardcoded values in the db on receiving
  the API call instead of using request Data)
 
+
 1.node clientServer.js 6 tcp://127.0.0.1 12345 true 3000
 
-
-
 API CALL:- 
+
+IPADDRESSOFWEBSERVER:3000/readData
 
 
 //For writing request
