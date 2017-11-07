@@ -17,7 +17,7 @@ receiver_socket = context.socket(zmq.PULL)
 receiver_socket.bind("tcp://*:"+str(sys.argv[1]))
 
 #All clusterNodes will receive packets from this socket
-sender_socket = context.socket(zmq.PUB)
+sender_socket = context.socket(zmq.PUSH)
 sender_socket.bind("tcp://*:5000");
 
 #WebServer receives response from this socket

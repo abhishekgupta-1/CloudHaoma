@@ -19,6 +19,7 @@ web_port = process.argv[6]
 
 listen_socket = zmq.socket('pull');
 listen_socket.connect(router_address+":5002")
+//listen_socket.subscribe('')
 
 sender_socket = zmq.socket('push')
 sender_socket.connect(router_address+":"+send_port_no)
@@ -59,7 +60,6 @@ app.post('/readData', function(req, res){
   if (debug) console.log(data);
   var fileName = data['clientId']+"/"+data['sourceId'];
   msg = {'clientId' : serverID
-  , 'dest' : 1
   , 'requestId': requestId
   , 'rpc' : 'readEntry'
   , 'fileName' : fileName
