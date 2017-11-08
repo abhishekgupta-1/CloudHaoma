@@ -1,5 +1,5 @@
-//node clientServer.js 5 tcp://127.0.0.1 12345 true 3000
-//0       1            2          3        4     5    6
+//node clientServer.js 5 tcp://127.0.0.1 12345 true 3000 5002
+//0       1            2          3        4     5    6    7
 
 var app = require('express')();
 var bodyParser = require('body-parser');
@@ -16,10 +16,11 @@ router_address = process.argv[3]
 send_port_no = process.argv[4]
 debug = (process.argv[5] == "true")
 web_port = process.argv[6]
+listen_portno = process.argv[7]
+
 
 listen_socket = zmq.socket('pull');
-listen_socket.connect(router_address+":5002")
-//listen_socket.subscribe('')
+listen_socket.connect(router_address+listen_portno)
 
 sender_socket = zmq.socket('push')
 sender_socket.connect(router_address+":"+send_port_no)

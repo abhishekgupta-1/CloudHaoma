@@ -3,8 +3,8 @@ import zmq
 import json
 import ast
 
-#python2.7 router.py 12345 [[1,2,3],[4,5]] '[6]' false
-#            0         1           2         3    4	
+#python2.7 router.py 12345 [[1,2,3],[4,5]] '[6]' '[5002, 5003, 5004]' false
+#            0         1           2         3          4                5	
 
 
 #Sharding Function
@@ -20,9 +20,6 @@ receiver_socket.bind("tcp://*:"+str(sys.argv[1]))
 sender_socket = context.socket(zmq.PUB)
 sender_socket.bind("tcp://*:5000");
 
-#WebServer receives response from this socket
-client_socket = context.socket(zmq.PUSH)
-client_socket.bind("tcp://*:5002")
 
 #NodeIds of all clusterServers
 groups = ast.literal_eval(sys.argv[2]) #list of lists
@@ -34,8 +31,24 @@ webServers = ast.literal_eval(sys.argv[3])
 webServers = [str(x) for x in webServers]
 clusterServerId = 0
 
+#WebServer receives response from this socket
+#Port numbers of all webServers on which they will listen
+webServersPortNos = ast.literal_eval(sys.argv[4])
+webServersPortNos = [str(x) for x in webServersPortNos]
+port_dict = {}
+if len(webServersPortNos) != len(webServers):
+	print "Number of port numbers doesn't match number of webservers!\n"
+	exit()
+
+for i in range(len(webServers)):
+	socket = context.socket(zmq.PUSH)
+	socket.bind("tcp://*"+webServersPortNos[i])
+	port_dict[webServers[i]] = socket
+
+
+
 #Whether to print
-debug = (sys.argv[4] == "true")
+debug = (sys.argv[5] == "true")
 
 if debug:
 	print "Groups = ", groups
@@ -44,8 +57,8 @@ if debug:
 while True:
 	data = receiver_socket.recv_json()
 	dest_id = str(data.get('dest'))
-	if debug:
-		print data
+	#if debug:
+	#	print data
 	#print dest_id
 	if dest_id == 'None': 
 		#Packet received from a webserver
@@ -61,4 +74,4 @@ while True:
 		sender_socket.send("%s %s"%(dest_id, data))
 	else:
 		print data
-		client_socket.send("%s"%(json.dumps(data)))
+		port_dict[dest_id].send("%s"%(json.dumps(data)))
