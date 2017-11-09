@@ -20,7 +20,7 @@ listen_portno = process.argv[7]
 
 
 listen_socket = zmq.socket('pull');
-listen_socket.connect(router_address+listen_portno)
+listen_socket.connect(router_address+":"+listen_portno)
 
 sender_socket = zmq.socket('push')
 sender_socket.connect(router_address+":"+send_port_no)

@@ -34,6 +34,7 @@ clusterServerId = 0
 #WebServer receives response from this socket
 #Port numbers of all webServers on which they will listen
 webServersPortNos = ast.literal_eval(sys.argv[4])
+print webServersPortNos	
 webServersPortNos = [str(x) for x in webServersPortNos]
 port_dict = {}
 if len(webServersPortNos) != len(webServers):
@@ -42,7 +43,7 @@ if len(webServersPortNos) != len(webServers):
 
 for i in range(len(webServers)):
 	socket = context.socket(zmq.PUSH)
-	socket.bind("tcp://*"+webServersPortNos[i])
+	socket.bind("tcp://*:"+webServersPortNos[i])
 	port_dict[webServers[i]] = socket
 
 
