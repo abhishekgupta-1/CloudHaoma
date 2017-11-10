@@ -9,7 +9,7 @@ app.use(bodyParser.urlencoded({extended:true}));
 app.use(formidable());
 var http = require('http').Server(app);
 var zmq = require('zmq');
-
+require('events').EventEmitter.defaultMaxListeners = 100000000;
 
 serverID = process.argv[2]
 router_address = process.argv[3]
